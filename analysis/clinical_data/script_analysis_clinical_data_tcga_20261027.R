@@ -221,9 +221,6 @@ pathology_data_cleaned <- pathology_data %>% select(-empty_cols_pathology)  # Ap
 uni2_ids_data_cleaned <- uni2_ids_data %>% rename(cases.submitter_id = "V1")
 
 
-uni2_emb_wsi_files_cleaned <- uni2_emb_wsi_files %>% rename(filename) %>% 
-  
-  mutate(cases.submitter_id = str_extract())
 
 # 6. PATIENT-LEVEL DIAGNOSIS CHECK ----------------------------------------
 
@@ -284,10 +281,16 @@ wsi_emb_data <- uni2_emb_wsi_files %>%
   rename(filename = "V1") %>%
   mutate(cases.submitter_id = str_extract(filename, "TCGA-[A-Z0-9]{2}-[A-Z0-9]{4}"),
          piv_col = ifelse(grepl("DX1", filename),"DX1", "DX2"),
-         filename = gsub("UNI2-h_features/TCGA/", "", filename))%>%
-  pivot_wider(names_from = piv_col, values_from = filename)
+         filename = gsub("UNI2-h_features/TCGA/", "", filename)) %>%
+  pivot_wider(names_from = piv_col, values_from = filename) %>%
+  mutate(
+    DX1 = map_chr(DX1, ~ if (is.null(.x) || length(.x) == 0) NA_character_ else paste(.x, collapse = ";")),
+    DX2 = map_chr(DX2, ~ if (is.null(.x) || length(.x) == 0) NA_character_ else paste(.x, collapse = ";"))
+  ) %>%
+  
+  mutate(DX1 = ifelse(is.na(DX1),DX2,DX1))
 
-wsi_emb_data %>% naniar::miss_case_summary()
+wsi_emb_data %>% naniar::miss_var_summary()
 
 #Comment : 94% of DX2 are missing
 
@@ -355,6 +358,10 @@ json_targets <- as.list(
     tibble::deframe()
 )
 
+json_wsi_files <- as.list(
+  wsi_emb_data %>% filter(cases.submitter_id %in% ids_model_train | cases.submitter_id %in% ids_model_test) %>%
+    select(DX1) %>% pull()
+)
 
 # 11. EXPORT --------------------------------------------------------------
 
@@ -370,4 +377,5 @@ table_clinical_split %>%
 
 write_json(json_list_train_test, "output/split_ids.json",     pretty = TRUE, auto_unbox = TRUE)
 write_json(json_targets,         "output/split_targets.json", pretty = TRUE, auto_unbox = TRUE)
+write_json(json_wsi_files,       "output/list_wsi_train.json", pretty = TRUE, auto_unbox = TRUE)
 
