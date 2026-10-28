@@ -221,6 +221,8 @@ pathology_data_cleaned <- pathology_data %>% select(-empty_cols_pathology)  # Ap
 uni2_ids_data_cleaned <- uni2_ids_data %>% rename(cases.submitter_id = "V1")
 
 
+
+
 # 6. PATIENT-LEVEL DIAGNOSIS CHECK ----------------------------------------
 
 # Identify patients assigned to more than one histological subtype
@@ -295,16 +297,7 @@ table_clinical <- clinical_data_cleaned %>%
   select(-starts_with("cases"), -contains("_id"), -project.project_id,
          -diagnoses.progression_or_recurrence,
          -diagnoses.tumor_grade) %>%
-  tbl_summary(
-    by = ilc.classes,
-    type = all_continuous() ~ "continuous2",
-    statistic = list(
-      all_continuous2() ~ c("{median} ({p25} - {p75})", "{mean} ({sd})", "{min} - {max}"),
-      all_categorical() ~ "{n} ({p})"
-    ),
-    digits = all_continuous2() ~ 1
-  ) %>%
-  bold_labels()
+  build_summary_table(ilc.classes)
 
 table_clinical
 
@@ -335,16 +328,7 @@ table_clinical_split <- clinical_data_split %>%
   filter(treatments.initial_disease_status == "Initial Diagnosis") %>%
   select(where(~ !all(is.na(.x)))) %>%
   select(-starts_with("cases"), -contains("_id"), -project.project_id) %>%
-  tbl_summary(
-    by = Split,
-    type = all_continuous() ~ "continuous2",
-    statistic = list(
-      all_continuous2() ~ c("{median} ({p25} - {p75})", "{mean} ({sd})", "{min} - {max}"),
-      all_categorical() ~ "{n} ({p})"
-    ),
-    digits = all_continuous2() ~ 1
-  ) %>%
-  bold_labels()
+  build_summary_table(Split)
 
 table_clinical_split
 
@@ -378,3 +362,4 @@ table_clinical_split %>%
 
 write_json(json_list_train_test, "output/split_ids.json",     pretty = TRUE, auto_unbox = TRUE)
 write_json(json_targets,         "output/split_targets.json", pretty = TRUE, auto_unbox = TRUE)
+
