@@ -4,13 +4,9 @@ library(readxl)
 library(gtsummary)
 library(plotly)
 library(labelled)
-library(performance)
 library(survival)
-library(survminer)  # Pour les superbes graphiques de KM
-library(flexsurv)   # Pour le modèle Weibull (plus robuste que le Cox pour les pics à 0)
-library(tidyverse)
-library(ggiraph)
-
+library(gt)
+library(jsonlite)
 ####################################
 
 # TCGA BRCA clinical data
@@ -19,7 +15,7 @@ library(ggiraph)
 
 theme_gtsummary_journal(journal = "jama")
 theme_gtsummary_compact()
-theme_gtsummary_language("fr")
+theme_gtsummary_language("en")
 
 
 # DATA IMPORT ----
@@ -30,6 +26,7 @@ family_history_data = read.csv2("data/family_history.tsv", sep = "\t", na.string
 followup_data = read.csv2("data/follow_up.tsv", sep = "\t", na.strings = "'--")
 pathology_data = read.csv2("data/pathology_detail.tsv", sep = "\t", na.strings = "'--")
 uni2_ids_data = read.csv2("data/ids_emb_uni2.txt", header = FALSE)
+uni2_emb_wsi_files = read.csv2("data/list_wsi_UNI2_emb.txt", header = FALSE)
 
 # FUNCTIONS & CONSTANT ----
 
@@ -115,10 +112,10 @@ pathology_data %>% glimpse()
 naniar::vis_miss(clinical_data %>% select(starts_with("demographic")))
 naniar::vis_miss(clinical_data %>% select(starts_with("diagnoses")))
 naniar::vis_miss(clinical_data %>% select(starts_with("treatments")))
-naniar::vis_miss(exposure_data)
-naniar::vis_miss(family_history_data)
-naniar::vis_miss(followup_data)
-naniar::vis_miss(pathology_data)
+# naniar::vis_miss(exposure_data)
+# naniar::vis_miss(family_history_data)
+# naniar::vis_miss(followup_data)
+# naniar::vis_miss(pathology_data)
 
 
 #Missing variables 
@@ -172,7 +169,7 @@ uni2_ids_data_cleaned = uni2_ids_data %>% rename(cases.submitter_id = "V1")
 
 #Check patient diagnostic
 
-check <- clinical_data_cleaned %>%
+check = clinical_data_cleaned %>%
   group_by(cases.submitter_id) %>%
   summarise(n_classes = n_distinct(ilc.classes), .groups = "drop") %>%
   filter(n_classes > 1)
@@ -210,42 +207,103 @@ uni2_ids_data_cleaned$cases.submitter_id[uni2_ids_data_cleaned$cases.submitter_i
 clinical_data_cleaned_from_ambigous$cases.submitter_id[clinical_data_cleaned_from_ambigous$cases.submitter_id %in% uni2_ids_data_cleaned$cases.submitter_id ==FALSE]
 
 #We keep those ids 
-ids_model = uni2_ids_data_cleaned$cases.submitter_id[uni2_ids_data_cleaned$cases.submitter_id %in% clinical_data_cleaned_from_ambigous$cases.submitter_id==TRUE] %>% length()
+ids_model = uni2_ids_data_cleaned$cases.submitter_id[uni2_ids_data_cleaned$cases.submitter_id %in% clinical_data_cleaned_from_ambigous$cases.submitter_id==TRUE] 
+
+wsi_emb_data = uni2_emb_wsi_files %>% rename(filename="V1") %>% mutate(cases.submitter_id = str_extract(filename,"TCGA-[A-Z0-9]{2}-[A-Z0-9]{4}")) 
 
 
 # ANALYSIS ----
 
-## UNIVARIATE ANALYSIS----
+## BIVARIATE ANALYSIS----
 
 
-table_clinical = clinical_data_cleaned %>% select(-starts_with("cases"), -contains("_id"), project.project_id) %>% 
-  
+table_clinical = clinical_data_cleaned %>%
+  filter(treatments.initial_disease_status == "Initial Diagnosis") %>%
+  select(-starts_with("cases"), -contains("_id"), -project.project_id,
 
-tbl_summary(  by = ilc.classes,
-              statistic = list(
-                all_continuous2()  ~ c("{median} ({p25} - {p75})", "{mean} ({sd})", "{min} - {max}"),
-                all_categorical() ~ "{n} ({p})"
-                ),
-  digits = all_continuous() ~ 1
-) %>%
+         ) %>%
+  tbl_summary(
+    by = ilc.classes,
+    type = all_continuous() ~ "continuous2",
+    statistic = list(
+      all_continuous2() ~ c("{median} ({p25} - {p75})", "{mean} ({sd})", "{min} - {max}"),
+      all_categorical() ~ "{n} ({p})"
+    ),
+    digits = all_continuous2() ~ 1
+  ) %>%
   bold_labels()
 
-
+table_clinical
 ## TRAINING ----
 
 set.seed(42)
 
-clinical_data %>% select(cases.case_id) %>% dim()
+# Define train / test
 
-clinical_data_cleaned %>% select(contains("id")) %>% View()
+split_train_test = sample(c(TRUE, FALSE), length(ids_model), replace = TRUE, prob = c(0.8, 0.2))
 
-clinical_data_cleaned %>% select(cases.case_id, ilc.classes) %>% View()
+ids_model_train = ids_model[split_train_test==TRUE]
 
-pathology_data_cleaned %>% dim()
+ids_model_test = ids_model[split_train_test==FALSE]
 
+ids_model_train %>% length()
+
+ids_model_test %>% length()
+
+clinical_data_split = clinical_data_cleaned %>% 
+  filter(treatments.initial_disease_status == "Initial Diagnosis") %>%
+  
+  filter(cases.submitter_id %in% ids_model) %>% ungroup() %>%
+  mutate(Split = case_when(cases.submitter_id %in%  ids_model_train ~ "Train",
+                           cases.submitter_id %in%  ids_model_test ~ "Test"))
+
+
+table_clinical_split = clinical_data_split %>%select(-starts_with("cases"), -contains("_id"), -project.project_id,
+                                                     -diagnoses.progression_or_recurrence,
+                                                     -diagnoses.tumor_grade) %>%
+  filter(treatments.initial_disease_status == "Initial Diagnosis") %>%
+  tbl_summary(
+    by = Split,
+    type = all_continuous() ~ "continuous2",
+    statistic = list(
+      all_continuous2() ~ c("{median} ({p25} - {p75})", "{mean} ({sd})", "{min} - {max}"),
+      all_categorical() ~ "{n} ({p})"
+    ),
+    digits = all_continuous2() ~ 1
+  ) %>%
+  bold_labels()
+
+
+table_clinical_split
+
+
+
+#Dataloader
+
+json_list_train_test = list(
+  train_val = clinical_data_split %>% filter(Split == "Train") %>% pull(cases.submitter_id),
+  test      = clinical_data_split %>% filter(Split == "Test")  %>% pull(cases.submitter_id)
+)
+
+json_targets = as.list(clinical_data_split %>% select(cases.submitter_id, ilc.classes.ord) %>% tibble::deframe())
 
 #EXPORT ----
 
 table_clinical %>%
   as_gt() %>%
-  gtsave(filename = "table_clinical_data_20261027.html")
+  tab_source_note(source_note = "Only initial diagnotic available was considered") %>%
+  gtsave(filename = "output/table_clinical_data_20261028.html")
+
+table_clinical_split %>%
+    as_gt() %>%
+    tab_source_note(source_note = "Only initial diagnotic available was considered") %>%
+  gtsave(filename = "output/table_clinical_split_20261028.html")
+
+
+write_json(json_list_train_test, "output/split_ids.json", pretty = TRUE, auto_unbox = TRUE)
+
+write_json(json_targets, "output/split_targets.json", pretty = TRUE, auto_unbox = TRUE)
+
+
+
+
