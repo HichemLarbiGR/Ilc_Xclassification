@@ -221,7 +221,9 @@ pathology_data_cleaned <- pathology_data %>% select(-empty_cols_pathology)  # Ap
 uni2_ids_data_cleaned <- uni2_ids_data %>% rename(cases.submitter_id = "V1")
 
 
-
+uni2_emb_wsi_files_cleaned <- uni2_emb_wsi_files %>% rename(filename) %>% 
+  
+  mutate(cases.submitter_id = str_extract())
 
 # 6. PATIENT-LEVEL DIAGNOSIS CHECK ----------------------------------------
 
@@ -280,8 +282,14 @@ ids_model <- uni2_ids_data_cleaned$cases.submitter_id[
 # Map each embedding file to its patient (TCGA barcode)
 wsi_emb_data <- uni2_emb_wsi_files %>%
   rename(filename = "V1") %>%
-  mutate(cases.submitter_id = str_extract(filename, "TCGA-[A-Z0-9]{2}-[A-Z0-9]{4}"))
+  mutate(cases.submitter_id = str_extract(filename, "TCGA-[A-Z0-9]{2}-[A-Z0-9]{4}"),
+         piv_col = ifelse(grepl("DX1", filename),"DX1", "DX2"),
+         filename = gsub("UNI2-h_features/TCGA/", "", filename))%>%
+  pivot_wider(names_from = piv_col, values_from = filename)
 
+wsi_emb_data %>% naniar::miss_case_summary()
+
+#Comment : 94% of DX2 are missing
 
 # 8. BIVARIATE ANALYSIS (ILC vs. NST) -------------------------------------
 
