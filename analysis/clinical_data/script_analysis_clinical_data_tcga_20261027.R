@@ -360,7 +360,34 @@ json_targets <- as.list(
 
 json_wsi_files <- as.list(
   wsi_emb_data %>% filter(cases.submitter_id %in% ids_model_train | cases.submitter_id %in% ids_model_test) %>%
-    select(DX1) %>% pull()
+    select(cases.submitter_id,DX1) %>%
+    tibble::deframe()
+)
+
+json_dataset <- list(
+  train_val = clinical_data_split %>%
+    filter(Split == "Train") %>%
+    select(cases.submitter_id, ilc.classes.ord) %>%
+    distinct %>%
+    left_join(
+      wsi_emb_data %>% select(cases.submitter_id, DX1),
+      by = "cases.submitter_id"
+    ) %>%
+    filter(!is.na(DX1)) %>%
+    transmute(id = cases.submitter_id, filename = DX1, target = ilc.classes.ord) %>%
+    purrr::transpose(),
+  
+  test = clinical_data_split %>%
+    filter(Split == "Test") %>%
+    select(cases.submitter_id, ilc.classes.ord) %>%
+    distinct %>%
+    left_join(
+      wsi_emb_data %>% select(cases.submitter_id, DX1),
+      by = "cases.submitter_id"
+    ) %>%
+    filter(!is.na(DX1)) %>%
+    transmute(id = cases.submitter_id, filename = DX1, target = ilc.classes.ord) %>%
+    purrr::transpose()
 )
 
 # 11. EXPORT --------------------------------------------------------------
@@ -375,7 +402,8 @@ table_clinical_split %>%
   tab_source_note(source_note = "Only the initial diagnosis was considered") %>%
   gtsave(filename = "output/table_clinical_split_20261028.html")
 
-write_json(json_list_train_test, "output/split_ids.json",     pretty = TRUE, auto_unbox = TRUE)
-write_json(json_targets,         "output/split_targets.json", pretty = TRUE, auto_unbox = TRUE)
-write_json(json_wsi_files,       "output/list_wsi_train.json", pretty = TRUE, auto_unbox = TRUE)
 
+write_json(json_list_train_test, "output/split_ids.json",      pretty = TRUE, auto_unbox = TRUE)
+write_json(json_targets,         "output/split_targets.json",  pretty = TRUE, auto_unbox = TRUE)
+write_json(json_wsi_files,       "output/list_wsi_train.json", pretty = TRUE, auto_unbox = TRUE)
+write_json(json_dataset,         "dataset.json",               pretty = TRUE, auto_unbox = TRUE)

@@ -1,0 +1,33 @@
+
+# Data and output paths
+paths:
+  h5_dir: "/home/h_larbi/ilc_Xclass_20261026/prepros/UNI2-h_features/TCGA/"
+  results: "analysis/MIL/results/training_results_abmil.csv"
+  model_weights: "analysis/MIL/model_weights/risks/model_abmil_risks_uni2_20261029.pth"
+  json_split_wsi_target_path: "/home/h_larbi/ilc_Xclass_20261026/prepros/data/dataset.json"
+
+# Model and feature configuration
+model:
+  name: "uni2"
+  input_dim: 1536
+  num_classes: 2
+  scale_factor: 16
+
+# Training hyperparameters
+training:
+  epochs: 1
+  batch_size: 1
+  learning_rate: 0.00005
+  weight_decay_kfold: 0.005
+  weight_decay_final: 0.001
+  label_smoothing: 0.1
+  patience_stop: 10
+  factor_sche: 0.5
+  patience_sche: 5
+  min_lr_sche: 1e-6
+
+# Cross-validation and monitoring
+evaluation:
+  n_splits: 2
+  test_size: 0.2
+  monitor_test_size: 0.1
