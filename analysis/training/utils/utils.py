@@ -16,21 +16,24 @@ log_config_and_model
     and architecture using the configured logger.
 load_json
     Load and return the contents of a JSON file.
-normalize_slide_labels
-    Convert raw slide labels to integer case IDs and labels.
 """
 
 import json
 import logging
 import math
+import os
+import random
+import uuid
 from dataclasses import asdict
+from datetime import datetime
 from typing import Any
 
+import numpy as np
+import pandas as pd
+import torch
 import torch.nn as nn
 
 logger = logging.getLogger(__name__)
-
-SEED = 42
 
 def log_config_and_model(
     config: Any,
@@ -123,22 +126,178 @@ def load_json(path):
         return json.load(file)
 
 
-def normalize_slide_labels(raw_labels):
-    """Convert valid slide labels to integer case IDs and labels.
+def _clean(obj):
+    """numpy -> python, NaN/inf -> None. Rien d'autre."""
+    if isinstance(obj, dict):
+        return {k: _clean(v) for k, v in obj.items()}
+    if isinstance(obj, (list, tuple)):
+        return [_clean(v) for v in obj]
+    if isinstance(obj, np.ndarray):
+        return obj.tolist()
+    if isinstance(obj, (np.floating, float)):
+        return None if not np.isfinite(obj) else float(obj)
+    if isinstance(obj, (np.integer, int)):
+        return int(obj)
+    return obj
 
-    Labels may be stored as integers or as lists whose first element
-    contains the label. Missing values and scalar NaN values are skipped.
+
+def save_run_json(run_dict, save_dir):
     """
-    normalized_labels = {}
+    Écrit un JSON lisible depuis ton dict de résultats.
 
-    for key, value in raw_labels.items():
-        if value is None:
-            continue
+    Args:
+        run_dict: dict avec 'Configuration', 'Fold 1'... 'Fold N', 'Test'.
+        save_dir: dossier de sortie.
 
-        if isinstance(value, float) and math.isnan(value):
-            continue
+    Returns:
+        Le chemin du JSON écrit.
+    """
+    os.makedirs(save_dir, exist_ok=True)
 
-        label = value[0] if isinstance(value, list) else value
-        normalized_labels[int(key)] = int(label)
+    run_id    = datetime.now().strftime("%Y%m%d_%H%M%S") + "_" + uuid.uuid4().hex[:6]
+    timestamp = datetime.now().isoformat(timespec="seconds")
 
-    return normalized_labels
+    # --- Config ---
+    config = run_dict["Configuration"]
+
+    # --- Folds (ordre numérique, pas lexicographique) ---
+    fold_keys = sorted(
+        (k for k in run_dict if k.startswith("Fold ")),
+        key=lambda k: int(k.split()[1]),
+    )
+    folds = []
+    for k in fold_keys:
+        f = run_dict[k]
+        folds.append({
+            "fold":        int(k.split()[1]),
+            "final_epoch": f["Final epoch"],
+            "loss": {
+                "train": f["Train losses"],
+                "val":   f["Val losses"],
+            },
+            "train": _clean(f["Train metrics"]),
+            "val":   _clean(f["Val metrics"]),
+        })
+
+    # --- Test ---
+    test = {}
+    for metric, triple in run_dict["Test"].items():
+        mean, low, high = triple
+        test[metric] = {"mean": mean, "ci_low": low, "ci_high": high}
+
+    record = {
+        "run_id":    run_id,
+        "timestamp": timestamp,
+        "config":    _clean(config),
+        "folds":     folds,
+        "test":      _clean(test),
+    }
+
+    path_result = create_path_results(save_dir, run_id)
+
+    create_folder_results(path_result)
+
+    path = os.path.join(path_result, f"{run_id}.json")
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(record, f, indent=2, ensure_ascii=False)
+    return run_id, timestamp, path_result
+
+
+def build_name_model_pth(path, architecture, foundation_model_name, id_model):
+    return path + "/model_" + architecture + "_" + foundation_model_name.lower() + "_" + id_model +".pth"
+
+
+def build_name_h5_path(h5_dir, fm_model_name):
+    return h5_dir + "/" + fm_model_name.upper()
+
+
+def set_seed(seed: int) -> None:
+    """Fixe les graines Python, NumPy et PyTorch (CPU et GPU)."""
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)  # sans effet s'il n'y a pas de GPU
+
+
+def clean_label(value):
+    """Convertit une valeur brute du JSON de labels en int, ou None si inutilisable.
+
+    Accepte un scalaire ou une liste (on garde le premier élément) et rejette
+    None / NaN, y compris un NaN placé dans une liste.
+    """
+    if isinstance(value, (list, tuple)):
+        value = value[0] if value else None
+    if value is None or (isinstance(value, float) and math.isnan(value)):
+        return None
+    return int(value)
+
+
+def log_scores(results: dict) -> None:
+    """Affiche les métriques ; l'IC n'est affiché que s'il a été calculé."""
+    for name, (value, low, high) in results.items():
+        has_ci = (
+            low is not None
+            and high is not None
+            and not (isinstance(low, float) and math.isnan(low))
+            and not (isinstance(high, float) and math.isnan(high))
+        )
+        ci = (
+            f"  [IC 95 % : {low:.4f} - {high:.4f}]"
+            if has_ci
+            else ""
+        )
+        logger.info("  %-16s: %.4f%s", name, value, ci)
+
+
+
+def _log_errors_predictions(errors: pd.DataFrame, prob_cols: list[str]) -> None:
+
+    logger.info("Top 15 des erreurs de test les plus confiantes (à relire) :")
+
+    for _, row in errors[errors["Dataset_Split"] == "Test"].head(15).iterrows():
+        probas = ", ".join(f"{c}:{row[c]:.2f}" for c in prob_cols)
+        logger.info(
+            "  Slide %d [%s] | Vrai: %d -> Prédit: %d | [%s]",
+            row["Slide_ID"], row["Test_Subset"], row["True_Label"],
+            row["Pred_Label"], probas,
+        )
+
+
+def _build_title_figures(basename: str, fm_name: str, archi_name: str, model_id_value: str) -> str:
+    return f"{basename} ( {fm_name} - {archi_name} - {model_id_value} )"
+
+def _get_ids_from_model_path(path: str) -> str:
+    sans_extension = path.rsplit('.', 1)[0]
+    resultat = sans_extension.rsplit('_', 1)[-1]
+    return resultat
+
+
+def create_folder_results(path: str) -> None:
+    if not os.path.exists(path):
+        os.makedirs(path)
+    return
+
+
+def create_path_results(s_dir, r_id):
+    return f"{s_dir}/{r_id}"
+
+
+def _build_path_results(path: str, r_id: str) -> str:
+    return f"{path}/{r_id}"
+
+
+def _build_files_figures_path(path:str, file_name: str):
+    return f"{path}/{file_name}"
+
+
+def _build_dict_report(split, ids_list, y_list, pred_list, prob_list):
+    return {
+        split: [
+            (ids_list[i], y_list[i], pred_list[i], prob_list[i])
+            for i in range(len(ids_list))
+        ]
+    }
+
+def _build_filename_figures(basename:str, arch_model:str,fm_model:str, model_id_value:str, ext:str):
+    return f"{basename}_{arch_model}_{fm_model}_{model_id_value}.{ext}"
+

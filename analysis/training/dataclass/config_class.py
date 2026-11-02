@@ -17,13 +17,17 @@ class TrainingConfig:
     path_save_results: str
     save_model_path: str
     json_split_wsi_target_path: str
+    seed: int
 
     # Model and feature parameters.
     input_dim: int
     num_classes: int
-    model_name: str
+    classes_name: str
+    architecture_name: str
+    foundation_model_name: str
     scale_factor: int
     scale: float = field(init=False)
+    
 
     # Training hyperparameters.
     epochs: int
@@ -33,14 +37,28 @@ class TrainingConfig:
     weight_decay_final: float
     label_smoothing: float
     patience_stop: int
-    factor_sche: 0.5
-    patience_sche: 10
-    min_lr_sche: 1e-6
+    factor_sche: float
+    patience_sche: int
+    min_lr_sche: float
 
     # Evaluation parameters.
     n_splits: int
     test_size: float
     monitor_test_size: float
+    bootstrap_niter: int
+    n_tta: int
+    infer_model: str
+    subset_name: str
+    figures_extension: str
+
+    #XAI
+    scale_factor: int
+    top_k: int
+    bottom_k: int
+    score_threshold: int
+    cmap: str
+    alpha: float
+    class_weights: tuple[float, ...] = (1.0, 4.0)
 
     def __post_init__(self) -> None:
         """Validate parameters and compute derived values."""
@@ -94,12 +112,16 @@ class TrainingConfig:
 
         return cls(
             h5_dir=resolve(raw["paths"]["h5_dir"]),
-            path_save_results=resolve(raw["paths"]["results"]),
-            save_model_path=resolve(raw["paths"]["model_weights"]),
+            path_save_results=resolve(raw["paths"]["path_results"]),
+            save_model_path=resolve(raw["paths"]["save_model_path"]),
             json_split_wsi_target_path=resolve(raw["paths"]["json_split_wsi_target_path"]),
-            model_name=raw["model"]["name"],
+            seed=raw["paths"]["seed"],
+            class_weights=raw["model"]["class_weights"],
+            architecture_name=raw["model"]["architecture_name"],
+            foundation_model_name=raw["model"]["foundation_model_name"],
             input_dim=raw["model"]["input_dim"],
             num_classes=raw["model"]["num_classes"],
+            classes_name=raw["model"]["classes_name"],
             scale_factor=raw["model"]["scale_factor"],
             epochs=raw["training"]["epochs"],
             batch_size=raw["training"]["batch_size"],
@@ -114,4 +136,15 @@ class TrainingConfig:
             n_splits=raw["evaluation"]["n_splits"],
             test_size=raw["evaluation"]["test_size"],
             monitor_test_size=raw["evaluation"]["monitor_test_size"],
+            bootstrap_niter=raw["evaluation"]["bootstrap_niter"],
+            n_tta=raw["evaluation"]["n_tta"],
+            infer_model=raw["evaluation"]["infer_model"],
+            subset_name=raw["evaluation"]["subset_name"],
+            figures_extension=raw["evaluation"]["figures_extension"],
+            scale_factor=raw["xai"]["scale_factor"],
+            top_k=raw["xai"]["top_k"],
+            bottom_k=raw["xai"]["bottom_k"],
+            score_threshold=raw["xai"]["score_threshold"],
+            cmap=raw["xai"]["cmap"],
+            alpha=raw["xai"]["alpha"]
         )

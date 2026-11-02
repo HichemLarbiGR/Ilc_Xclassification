@@ -12,3 +12,4 @@ for filename in ["TCGA/TCGA-BRCA_IDC.tar.gz", "TCGA/TCGA-BRCA_OTHERS.tar.gz"]:
         repo_type="dataset",
         local_dir="UNI2-h_features"
     )
+    print(f"Téléchargé : {path}")

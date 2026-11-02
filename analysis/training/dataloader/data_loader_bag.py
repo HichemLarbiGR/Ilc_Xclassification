@@ -15,7 +15,6 @@ from torch.utils.data import Dataset
 
 THRESHOLD_BAG = 5000
 MIN_PATCHES = 100
-H5_DIR = "UNI2-h_features/TCGA"
 
 
 class TCGA_BRCA_BagDataset(Dataset):

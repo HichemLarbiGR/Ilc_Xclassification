@@ -25,11 +25,11 @@ PROJECT_ROOT = os.path.dirname(
 if PROJECT_ROOT not in sys.path:
     sys.path.insert(0, PROJECT_ROOT)
 
-from models.MIL_models import AttentionMIL
+from models.MIL_models import AttentionMIL, build_model_class
 from dataloader.data_loader_bag import TCGA_BRCA_BagDataset
 
 from dataclass.config_class import TrainingConfig
-from utils.utils import log_config_and_model, load_json
+from utils.utils import log_config_and_model, load_json, build_name_h5_path
 from training.training_utils import run_stratified_kfold_training
 
 
@@ -80,9 +80,6 @@ def main():
         config.json_split_wsi_target_path,
     )
 
-    # Load the global split (id, filename, target).
-    global_split = load_json(config.json_split_wsi_target_path)
-
     train_val_slides = global_split["train_val"] 
     test_slides      = global_split["test"]        
 
@@ -96,21 +93,22 @@ def main():
         logger.info(
             "Initializing datasets and filtering slides "
         )
+        path_h5 = build_name_h5_path(config.h5_dir, config.foundation_model_name)
 
         train_dataset = TCGA_BRCA_BagDataset(
-            h5_dir=config.h5_dir,
+            h5_dir=path_h5,
             slides=train_val_slides,
             is_train=True,
         )
 
         eval_dataset = TCGA_BRCA_BagDataset(
-            h5_dir=config.h5_dir,
+            h5_dir=path_h5,
             slides=train_val_slides,
             is_train=False,
         )
 
         test_dataset = TCGA_BRCA_BagDataset(
-            h5_dir=config.h5_dir,
+            h5_dir=path_h5,
             slides=test_slides,
             is_train=False,
         )
@@ -153,12 +151,13 @@ def main():
     )
     logger.info("Compute device: %s", device)
 
+    architecture_model = build_model_class(config.architecture_name)
     # Run cross-validation, final training, and test evaluation.
     run_stratified_kfold_training(
         train_dataset=train_dataset,
         eval_dataset=eval_dataset,
         test_dataset=test_dataset,
-        model_class=AttentionMIL,
+        model_class=architecture_model,
         device=device,
         config=config,
     )

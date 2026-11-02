@@ -1,21 +1,25 @@
 
 # Data and output paths
 paths:
-  h5_dir: "/home/h_larbi/ilc_Xclass_20261026/prepros/UNI2-h_features/TCGA/"
-  results: "analysis/MIL/results/training_results_abmil.csv"
-  model_weights: "analysis/MIL/model_weights/risks/model_abmil_risks_uni2_20261029.pth"
-  json_split_wsi_target_path: "/home/h_larbi/ilc_Xclass_20261026/prepros/data/dataset.json"
+  h5_dir: "/home/h_larbi/ilc_Xclass_20261026/prepros/"
+  path_results: "/home/h_larbi/ilc_Xclass_20261026/analysis/training/output/results"
+  save_model_path: "/home/h_larbi/ilc_Xclass_20261026/analysis/training/output/results/weights/"
+  json_split_wsi_target_path: "/home/h_larbi/ilc_Xclass_20261026/prepros/data/dataset_asier.json"
+  seed: 42
 
 # Model and feature configuration
 model:
-  name: "uni2"
+  architecture_name: "abmil"
+  foundation_model_name: "uni2"
   input_dim: 1536
   num_classes: 2
+  classes_name: ["NST","ILC"]
   scale_factor: 16
-
+  class_weights: [1.0, 4.0]
+  
 # Training hyperparameters
 training:
-  epochs: 1
+  epochs: 100
   batch_size: 1
   learning_rate: 0.00005
   weight_decay_kfold: 0.005
@@ -24,10 +28,23 @@ training:
   patience_stop: 10
   factor_sche: 0.5
   patience_sche: 5
-  min_lr_sche: 1e-6
+  min_lr_sche: 0.000001
 
 # Cross-validation and monitoring
 evaluation:
-  n_splits: 2
+  n_splits: 5
   test_size: 0.2
   monitor_test_size: 0.1
+  bootstrap_niter: 2000
+  n_tta: 5
+  infer_model: "/home/h_larbi/ilc_Xclass_20261026/analysis/training/output/results/weights/model_abmil_uni2_20261102_143759_ab98cb.pth"
+  subset_name: "test"
+  figures_extension: svg
+
+xai:
+  scale_factor: 16
+  top_k: 10
+  bottom_k: 10
+  score_threshold: 0
+  cmap: 'hot'
+  alpha: 0.6

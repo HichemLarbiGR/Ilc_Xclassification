@@ -2,8 +2,7 @@ import h5py
 import numpy as np
 from pathlib import Path
 
-fpath = "/home/h_larbi/ilc_Xclass_20261026/prepros/UNI2-h_features/TCGA/TCGA-GM-A2DI-01Z-00-DX1.5E9715EA-9D2B-49D0-8F1D-972CF24B1960.h5"
-
+fpath = "/home/h_larbi/ilc_Xclass_20261026/prepros/UNI2/TCGA-XX-A899-01Z-00-DX1.08FE27B7-73B8-4CE3-ACF4-0689C81C140B.h5"
 
 with h5py.File(fpath, "r") as f:
     print("=" * 70)

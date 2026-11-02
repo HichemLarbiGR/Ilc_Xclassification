@@ -23,6 +23,7 @@ import numpy as np
 from sklearn.metrics import (
     accuracy_score,
     confusion_matrix,
+    average_precision_score,
     f1_score,
     precision_score,
     recall_score,
@@ -31,11 +32,19 @@ from sklearn.metrics import (
 from sklearn.preprocessing import label_binarize
 
 
+def get_sensitivity(cm: np.ndarray) -> float:
+    tn, fp, fn, tp = cm.ravel()
+    return tp / (tp + fn) if (tp + fn) else float("nan")
+
+def get_specificity(cm: np.ndarray) -> float:
+    tn, fp, fn, tp = cm.ravel()
+    return tn / (tn + fp) if (tn + fp) else float("nan")
+
 def get_metrics(
     all_labels: np.ndarray,
     all_preds: np.ndarray,
     all_probs: Optional[np.ndarray] = None,
-    num_classes: int = 3,
+    num_classes: int = 2,
 ) -> Dict[str, Any]:
     """
     Compute global classification metrics.
@@ -73,6 +82,9 @@ def get_metrics(
         "recall_macro": float("nan"),
         "f1_macro": float("nan"),
         "f1_weighted": float("nan"),
+        "specificity": float("nan"),
+        "sensitivity": float("nan"),
+        "auprc": float("nan"),
         "auc": float("nan"),
         "confusion_matrix": confusion_matrix(
             all_labels,
@@ -109,24 +121,48 @@ def get_metrics(
                     average="weighted",
                     zero_division=0,
                 ),
+                "sensitivity": get_sensitivity(metrics["confusion_matrix"]),
+                "specificity": get_specificity(metrics["confusion_matrix"]),
             }
         )
 
         # Compute AUC only when predicted probabilities are available.
         if all_probs is not None:
+            all_probs = np.asarray(all_probs)
             try:
-                labels_bin = label_binarize(
-                    all_labels,
-                    classes=list(range(num_classes)),
-                )
+                if num_classes == 2:
+                    y_score = all_probs[:, 1]
+                else:
+                    # multi-classe : AP macro via one-vs-rest
+                    labels_bin = label_binarize(
+                        all_labels, classes=list(range(num_classes))
+                    )
+                    metrics["auprc"] = float(
+                        average_precision_score(labels_bin, all_probs, average="macro")
+                    )
+                    y_score = None
+                if y_score is not None:
+                    metrics["auprc"] = float(
+                        average_precision_score(all_labels, y_score)
+                    )
+            except ValueError as e:
+                print(f"[AUPRC] failed: {type(e).__name__}: {e}")
+                metrics["auprc"] = None
 
-                metrics["auc"] = roc_auc_score(
-                    labels_bin,
-                    all_probs,
-                    multi_class="ovr",
-                    average="macro",
-                )
-            except Exception:
-                pass
+            # AUC (existant)
+            try:
+                if num_classes == 2:
+                    metrics["auc"] = roc_auc_score(all_labels, all_probs[:, 1])
+                else:
+                    labels_bin = label_binarize(
+                        all_labels, classes=list(range(num_classes))
+                    )
+                    metrics["auc"] = roc_auc_score(
+                        labels_bin, all_probs,
+                        multi_class="ovr", average="macro",
+                    )
+            except Exception as e:
+                print(f"[AUC] failed: {type(e).__name__}: {e}")
+                metrics["auc"] = None
 
     return metrics

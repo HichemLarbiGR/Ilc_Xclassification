@@ -436,6 +436,16 @@ def build_model(
     )
 
 
+def build_model_class(name: str) -> type[nn.Module]:
+    name = name.lower()
+    if name in ("mean", "meanpool", "max"):
+        return MeanMaxPoolMIL
+    if name in ("abmil", "attn", "abmil"):
+        return AttentionMIL
+    if name in ("transformer", "transmil", "trans"):
+        return TransMIL
+    raise ValueError(f"Unknown model name: {name!r}.")
+
 class EarlyStopping:
     """
     Track validation loss to determine when training should stop.
