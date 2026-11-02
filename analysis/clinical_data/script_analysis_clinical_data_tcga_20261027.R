@@ -119,6 +119,7 @@ pathology_data      <- read.csv2("data/pathology_detail.tsv", sep = "\t", na.str
 
 uni2_ids_data       <- read.csv2("data/ids_emb_uni2.txt",       header = FALSE)
 uni2_emb_wsi_files  <- read.csv2("data/list_wsi_UNI2_emb.txt",  header = FALSE)
+asier_emb_wsi_files <- read.csv2("data/asier_dataset_hopt0_20261030",  header = FALSE)
 
 
 # 4. EXPLORATORY DATA ANALYSIS --------------------------------------------
@@ -221,7 +222,6 @@ pathology_data_cleaned <- pathology_data %>% select(-empty_cols_pathology)  # Ap
 uni2_ids_data_cleaned <- uni2_ids_data %>% rename(cases.submitter_id = "V1")
 
 
-
 # 6. PATIENT-LEVEL DIAGNOSIS CHECK ----------------------------------------
 
 # Identify patients assigned to more than one histological subtype
@@ -294,6 +294,25 @@ wsi_emb_data %>% naniar::miss_var_summary()
 
 #Comment : 94% of DX2 are missing
 
+# 7bis. CHECK PROF. ASIER EMBEDDINGS FILES --------------------------------
+
+
+wsi_hopt0_emb_data <- asier_emb_wsi_files %>%
+  rename(filename = "V1") %>%
+  mutate(cases.submitter_id = str_extract(filename, "TCGA-[A-Z0-9]{2}-[A-Z0-9]{4}"),
+         piv_col = ifelse(grepl("DX1", filename),"DX1", "DX2"),
+         filename = gsub("UNI2-h_features/TCGA/", "", filename)) %>%
+  pivot_wider(names_from = piv_col, values_from = filename) %>%
+  mutate(
+    DX1 = map_chr(DX1, ~ if (is.null(.x) || length(.x) == 0) NA_character_ else paste(.x, collapse = ";")),
+    DX2 = map_chr(DX2, ~ if (is.null(.x) || length(.x) == 0) NA_character_ else paste(.x, collapse = ";"))
+  ) %>%
+  
+  mutate(DX1 = ifelse(is.na(DX1),DX2,DX1))
+
+wsi_hopt0_emb_data %>% naniar::miss_var_summary()
+
+
 # 8. BIVARIATE ANALYSIS (ILC vs. NST) -------------------------------------
 
 table_clinical <- clinical_data_cleaned %>%
@@ -344,6 +363,7 @@ table_clinical_split <- clinical_data_split %>%
 table_clinical_split
 
 
+
 # 10. DATALOADER FILES ----------------------------------------------------
 
 json_list_train_test <- list(
@@ -390,6 +410,33 @@ json_dataset <- list(
     purrr::transpose()
 )
 
+
+json_dataset_asier <- list(
+  train_val = clinical_data_split %>%
+    filter(Split == "Train") %>%
+    select(cases.submitter_id, ilc.classes.ord) %>%
+    distinct %>%
+    left_join(
+      wsi_hopt0_emb_data %>% select(cases.submitter_id, DX1),
+      by = "cases.submitter_id"
+    ) %>%
+    filter(!is.na(DX1)) %>%
+    transmute(id = cases.submitter_id, filename = DX1, target = ilc.classes.ord) %>%
+    purrr::transpose(),
+  
+  test = clinical_data_split %>%
+    filter(Split == "Test") %>%
+    select(cases.submitter_id, ilc.classes.ord) %>%
+    distinct %>%
+    left_join(
+      wsi_hopt0_emb_data %>% select(cases.submitter_id, DX1),
+      by = "cases.submitter_id"
+    ) %>%
+    filter(!is.na(DX1)) %>%
+    transmute(id = cases.submitter_id, filename = DX1, target = ilc.classes.ord) %>%
+    purrr::transpose()
+)
+
 # 11. EXPORT --------------------------------------------------------------
 
 table_clinical %>%
@@ -406,4 +453,5 @@ table_clinical_split %>%
 write_json(json_list_train_test, "output/split_ids.json",      pretty = TRUE, auto_unbox = TRUE)
 write_json(json_targets,         "output/split_targets.json",  pretty = TRUE, auto_unbox = TRUE)
 write_json(json_wsi_files,       "output/list_wsi_train.json", pretty = TRUE, auto_unbox = TRUE)
-write_json(json_dataset,         "dataset.json",               pretty = TRUE, auto_unbox = TRUE)
+write_json(json_dataset,         "output/dataset.json",        pretty = TRUE, auto_unbox = TRUE)
+write_json(json_dataset_asier,   "output/dataset_asier.json",  pretty = TRUE, auto_unbox = TRUE)

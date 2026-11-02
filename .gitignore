@@ -1110,3 +1110,13 @@
 /prepros/utils/gdc-client
 /analysis/readme.md
 /analysis/readme.md
+/analysis/clinical_data/.Rhistory
+/analysis/clinical_data/data/clinical.tsv
+/analysis/clinical_data/data/asier_dataset_hopt0_20261030
+/analysis/clinical_data/data/exposure.tsv
+/analysis/clinical_data/data/family_history.tsv
+/analysis/clinical_data/data/follow_up.tsv
+/analysis/clinical_data/data/ids_emb_uni2.txt
+/analysis/clinical_data/data/list_wsi_UNI2_emb.txt
+/analysis/clinical_data/data/pathology_detail.tsv
+/analysis/clinical_data/data/slide_manifest.csv
