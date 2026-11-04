@@ -5,12 +5,14 @@ paths:
   path_results: "/home/h_larbi/ilc_Xclass_20261026/analysis/training/output/results"
   save_model_path: "/home/h_larbi/ilc_Xclass_20261026/analysis/training/output/results/weights/"
   json_split_wsi_target_path: "/home/h_larbi/ilc_Xclass_20261026/prepros/data/dataset_asier.json"
+  png_path : "/home/h_larbi/ilc_Xclass_20261026/prepros/data/png_wsi/"
+  wsi_path : "/home/h_larbi/ilc_Xclass_20261026/prepros/data/wsi/"
   seed: 42
 
 # Model and feature configuration
 model:
   architecture_name: "abmil"
-  foundation_model_name: "uni2"
+  foundation_model_name: "hopt0" #uni2 or hopt0
   input_dim: 1536
   num_classes: 2
   classes_name: ["NST","ILC"]
@@ -37,7 +39,7 @@ evaluation:
   monitor_test_size: 0.1
   bootstrap_niter: 2000
   n_tta: 5
-  infer_model: "/home/h_larbi/ilc_Xclass_20261026/analysis/training/output/results/weights/model_abmil_uni2_20261102_143759_ab98cb.pth"
+  infer_model: "/home/h_larbi/ilc_Xclass_20261026/analysis/training/output/results/weights/model_abmil_hopt0_20261102_153637_5cabc7.pth"
   subset_name: "test"
   figures_extension: svg
 
@@ -48,3 +50,5 @@ xai:
   score_threshold: 0
   cmap: 'hot'
   alpha: 0.6
+  xai_model: "/home/h_larbi/ilc_Xclass_20261026/analysis/training/output/results/weights/model_abmil_hopt0_20261102_153637_5cabc7.pth"
+  top_k_perc : 10

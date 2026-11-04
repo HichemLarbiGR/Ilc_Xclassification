@@ -853,7 +853,7 @@ def run_stratified_kfold_training(
 
     run_id, time_save, save_results_path = save_run_json(results_json, save_dir=save_directory)
 
-    model_name_path = build_name_model_pth(config.save_model_path, config.architecture_name, config.foundation_model_name, run_id)
+    model_name_path = build_name_model_pth(config.save_model_path, config.architecture_name, config.foundation_model_name, run_id, config.seed)
     
     os.makedirs(os.path.dirname(model_name_path), exist_ok=True)
     

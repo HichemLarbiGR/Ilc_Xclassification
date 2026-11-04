@@ -17,6 +17,8 @@ class TrainingConfig:
     path_save_results: str
     save_model_path: str
     json_split_wsi_target_path: str
+    png_path: str
+    wsi_path: str
     seed: int
 
     # Model and feature parameters.
@@ -58,6 +60,8 @@ class TrainingConfig:
     score_threshold: int
     cmap: str
     alpha: float
+    xai_model: str
+    top_k_perc: int
     class_weights: tuple[float, ...] = (1.0, 4.0)
 
     def __post_init__(self) -> None:
@@ -115,6 +119,8 @@ class TrainingConfig:
             path_save_results=resolve(raw["paths"]["path_results"]),
             save_model_path=resolve(raw["paths"]["save_model_path"]),
             json_split_wsi_target_path=resolve(raw["paths"]["json_split_wsi_target_path"]),
+            png_path=raw["paths"]["png_path"],
+            wsi_path=raw["paths"]["wsi_path"],
             seed=raw["paths"]["seed"],
             class_weights=raw["model"]["class_weights"],
             architecture_name=raw["model"]["architecture_name"],
@@ -122,7 +128,6 @@ class TrainingConfig:
             input_dim=raw["model"]["input_dim"],
             num_classes=raw["model"]["num_classes"],
             classes_name=raw["model"]["classes_name"],
-            scale_factor=raw["model"]["scale_factor"],
             epochs=raw["training"]["epochs"],
             batch_size=raw["training"]["batch_size"],
             learning_rate=raw["training"]["learning_rate"],
@@ -147,4 +152,6 @@ class TrainingConfig:
             score_threshold=raw["xai"]["score_threshold"],
             cmap=raw["xai"]["cmap"],
             alpha=raw["xai"]["alpha"]
+            xai_model=raw["xai"]["xai_model"]
+            top_k_perc=raw["xai"]["top_k_perc"]
         )

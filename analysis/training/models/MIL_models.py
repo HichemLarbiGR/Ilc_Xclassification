@@ -34,6 +34,30 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+import torch
+import torch.nn as nn
+
+class MeanPoolingLogReg(nn.Module):
+    def __init__(self, in_dim, num_classes):
+        super().__init__()
+        # Régression logistique = une simple couche linéaire
+        self.fc = nn.Linear(in_dim, num_classes) 
+
+    def forward(self, x):
+        # x est une liste de tenseurs [N_patches, in_dim]
+        x = x[0] 
+        
+        # 1. Mean pooling (agrégation)
+        pooled = x.mean(dim=0, keepdim=True) # [1, in_dim]
+        
+        # 2. Classification
+        logits = self.fc(pooled) # [1, num_classes]
+        
+        # 3. "Attention" factice et uniforme
+        # On utilise torch.full pour créer un tenseur de la bonne taille, sur le bon device
+        attn = torch.full((x.shape[0],), 1.0 / x.shape[0], device=x.device)
+        
+        return logits, attn
 
 class SimpleMIL(nn.Module):
     """

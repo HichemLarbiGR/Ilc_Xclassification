@@ -203,8 +203,8 @@ def save_run_json(run_dict, save_dir):
     return run_id, timestamp, path_result
 
 
-def build_name_model_pth(path, architecture, foundation_model_name, id_model):
-    return path + "/model_" + architecture + "_" + foundation_model_name.lower() + "_" + id_model +".pth"
+def build_name_model_pth(path, architecture, foundation_model_name, id_model, seed):
+    return f"{path}/model_{architecture}_{foundation_model_name.lower()}_{id_model}_seed_{seed}.pth"
 
 
 def build_name_h5_path(h5_dir, fm_model_name):
