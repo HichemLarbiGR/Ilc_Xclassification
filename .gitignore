@@ -1120,3 +1120,17 @@
 /analysis/clinical_data/data/list_wsi_UNI2_emb.txt
 /analysis/clinical_data/data/pathology_detail.tsv
 /analysis/clinical_data/data/slide_manifest.csv
+/analysis/training/__pycache__/__init__.cpython-313.pyc
+/analysis/training/__pycache__/pipeline_training_ilc.cpython-313.pyc
+/analysis/training/train/__pycache__/__init__.cpython-313.pyc
+/analysis/training/train/__pycache__/bootstrap.cpython-313.pyc
+/analysis/training/train/__pycache__/metrics.cpython-313.pyc
+/analysis/training/train/__pycache__/training_utils.cpython-313.pyc
+/analysis/training/xai/__pycache__/__init__.cpython-313.pyc
+/analysis/training/xai/__pycache__/__init__.cpython-39.pyc
+/analysis/training/xai/__pycache__/deletion_insertion.cpython-313.pyc
+/analysis/training/xai/__pycache__/leave_one_out.cpython-313.pyc
+/analysis/training/xai/__pycache__/sanity_check.cpython-313.pyc
+/analysis/training/xai/__pycache__/seed_stability.cpython-313.pyc
+/analysis/training/xai/__pycache__/seed_stability.cpython-39.pyc
+/analysis/training/xai/__pycache__/utils.cpython-313.pyc
