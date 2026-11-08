@@ -1,6 +1,6 @@
 <div align="center">
 
-# ilc_Xclass_20261026
+# Invasive Lobular Carcinoma X-classification
 
 **Whole-slide image classification of TCGA-BRCA histological subtypes (ILC vs. NST)**
 using Multiple-Instance Learning on foundation-model patch embeddings (UNI2, UNI2-h, HOPTIMUS0)
