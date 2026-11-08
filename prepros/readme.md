@@ -1,6 +1,6 @@
 <div align="center">
 
-# ilc_Xclass_20261026
+# Invasive Lobular Carcinoma X-classification 
 
 **Preprocessing pipeline for whole-slide image (WSI) classification — ILC / TCGA-BRCA**
 
