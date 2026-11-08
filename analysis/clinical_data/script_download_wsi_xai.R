@@ -70,6 +70,8 @@ manifest_wsi_pred = manifest_wsi %>% filter(patient_id %in% wsi_good_pred | pati
 ## 5.2 Other tables
 gdc_ids_to_download = manifest_wsi_pred$gdc_file_id
 
+gdc_ids_to_download
+
 followup_data_cleaned  <- followup_data  %>% select(-empty_cols_followup)   # Not processed further
 pathology_data_cleaned <- pathology_data %>% select(-empty_cols_pathology)  # Apart from MSI, no relevant variables
 

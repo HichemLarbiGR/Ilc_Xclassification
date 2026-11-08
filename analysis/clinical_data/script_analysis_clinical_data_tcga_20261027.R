@@ -119,7 +119,7 @@ pathology_data      <- read.csv2("data/pathology_detail.tsv", sep = "\t", na.str
 
 uni2_ids_data       <- read.csv2("data/ids_emb_uni2.txt",       header = FALSE)
 uni2_emb_wsi_files  <- read.csv2("data/list_wsi_UNI2_emb.txt",  header = FALSE)
-asier_emb_wsi_files <- read.csv2("data/asier_dataset_hopt0_20261030",  header = FALSE)
+asier_emb_wsi_files <- read.csv2("data/asier_dataset_hopt0_20261105",  header = FALSE)
 
 
 # 4. EXPLORATORY DATA ANALYSIS --------------------------------------------
@@ -437,7 +437,38 @@ json_dataset_asier <- list(
     purrr::transpose()
 )
 
-# 11. EXPORT --------------------------------------------------------------
+
+# 12. CENTER SIMULATION --------------------------------------------------------------
+
+json_dataset_center <- list(
+  train_val = clinical_data_split %>%
+    select(cases.submitter_id, ilc.classes.ord) %>%
+    distinct %>%
+    left_join(
+      wsi_hopt0_emb_data %>% select(cases.submitter_id, DX1),
+      by = "cases.submitter_id"
+    ) %>%
+    filter(!is.na(DX1)) %>%
+    mutate(centre = str_replace(cases.submitter_id, pattern = "TCGA-(..)-.*", replacement = "\\1")) %>% 
+    filter(!(centre %in% c("A8","D8","AR"))) %>%
+    transmute(id = cases.submitter_id, filename = DX1, target = ilc.classes.ord) %>%
+    purrr::transpose(),
+  
+  test = clinical_data_split %>%
+    select(cases.submitter_id, ilc.classes.ord) %>%
+    distinct %>%
+    left_join(
+      wsi_hopt0_emb_data %>% select(cases.submitter_id, DX1),
+      by = "cases.submitter_id"
+    ) %>%
+    filter(!is.na(DX1)) %>%
+    mutate(centre = str_replace(cases.submitter_id, pattern = "TCGA-(..)-.*", replacement = "\\1")) %>% 
+    filter(centre %in% c("A8","D8","AR")) %>%
+    transmute(id = cases.submitter_id, filename = DX1, target = ilc.classes.ord) %>%
+    purrr::transpose()
+)
+
+# 12. EXPORT --------------------------------------------------------------
 
 table_clinical %>%
   as_gt() %>%
@@ -455,3 +486,4 @@ write_json(json_targets,         "output/split_targets.json",  pretty = TRUE, au
 write_json(json_wsi_files,       "output/list_wsi_train.json", pretty = TRUE, auto_unbox = TRUE)
 write_json(json_dataset,         "output/dataset.json",        pretty = TRUE, auto_unbox = TRUE)
 write_json(json_dataset_asier,   "output/dataset_asier.json",  pretty = TRUE, auto_unbox = TRUE)
+write_json(json_dataset_center,  "output/dataset_center.json", pretty = TRUE, auto_unbox = TRUE)
