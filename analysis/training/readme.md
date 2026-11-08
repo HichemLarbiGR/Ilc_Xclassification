@@ -22,6 +22,7 @@ This folder applies a Multiple-Instance Learning (MIL) model to TCGA-BRCA whole-
 3.  **Evaluate** it on a held-out test set (bootstrap CIs, confusion matrix, ROC curve, predictions / errors tables)
 4.  **Explain** its predictions (attention heatmaps, top/bottom patches, sanity check, leave-one-out, seed stability, deletion/insertion curves)
 
+
 ## Table of contents
 
 - [Repository structure](#repository-structure)
@@ -189,8 +190,26 @@ output/results/
 
 ### Train the model (K-fold + final model + test)
 
+#### Architecture
+
+<p align="center">
+  <img src="docs/attention_mil_architecture.svg" alt="Attention-based Multiple Instance Learning" width="100%">
+</p>
+
+
+
+#### Overview
+
+<p align="center">
+  <img src="docs/training_evaluation_pipeline.svg" alt="ILC vs NST classification: full training and evaluation pipeline" width="100%">
+</p>
+
+#### Run script
+
 ```bash
-python pipeline_training_ilc.py
+
+sbatch init_pipeline.slurm
+
 ```
 
 This runs:
@@ -238,16 +257,63 @@ For each slide, the script writes to `output/results/<model_id>/xai/<slide_id>/`
 
 All XAI scripts share the same CLI (`--config`, plus IDs):
 
+#### Overview : normal vs random weigths 
+
+<p align="center">
+  <img src="docs/inter_seed_attention_analysis_mil.svg" alt="Sanity check analysis" width="100%">
+</p>
+
+#### Run script
+
 ```bash
 # Sanity check: attention of the trained model vs randomized model
 python -m xai.sanity_check --config config/abmil_risk.yaml --ids <id> [<id> ...]
 
-# Leave-one-out: Spearman correlation between attention and LOO scores
-python -m xai.leave_one_out --config config/abmil_risk.yaml --ids <id> [<id> ...]
+```
+
+### Reproducibility / seed sweep
+
+#### Overview
+
+<p align="center">
+  <img src="docs/inter_seed_attention_analysis_mil.svg" alt="Inter-seed stability analysis" width="100%">
+</p>
+
+The repository already contains checkpoints for several seeds of the same architecture and foundation model, e.g.:
+
+```text
+output/results/weights/model_abmil_hopt0_seed_42_...pth
+output/results/weights/model_abmil_hopt0_seed_123_...pth
+output/results/weights/model_abmil_hopt0_seed_456_...pth
+output/results/weights/model_abmil_hopt0_seed_789_...pth
+output/results/weights/model_abmil_hopt0_seed_1299_...pth
+output/results/weights/model_abmil_uni2_seed_42_...pth
+```
+
+They are used by `xai/seed_stability.py` to compare the attention maps of different seeds. To run a new seed sweep, edit `paths.seed` in the YAML and re-run `pipeline_training_ilc.py`.
+
+#### Run script
+
+```bash
 
 # Seed stability: compare attention maps of two models trained with different seeds
 python -m xai.seed_stability --config config/abmil_risk.yaml \
     --model_ids <id1> <id2> [...] --wsi_ids <slide_id> [<slide_id> ...]
+
+```
+
+### Deletion / insertion
+
+#### Overview
+
+<p align="center">
+  <img src="docs/deletion_insertion_test_abmil.svg" alt="Deletion/insertion analysis" width="100%">
+</p>
+
+
+#### Run script
+
+```bash
 
 # Faithfulness: deletion / insertion curves with random and inverted baselines
 python -m xai.deletion_insertion --config config/abmil_risk.yaml --ids <id> [<id> ...]
@@ -319,23 +385,6 @@ xai:
 ```
 
 </details>
-
----
-
-## Reproducibility / seed sweep
-
-The repository already contains checkpoints for several seeds of the same architecture and foundation model, e.g.:
-
-```text
-output/results/weights/model_abmil_hopt0_seed_42_...pth
-output/results/weights/model_abmil_hopt0_seed_123_...pth
-output/results/weights/model_abmil_hopt0_seed_456_...pth
-output/results/weights/model_abmil_hopt0_seed_789_...pth
-output/results/weights/model_abmil_hopt0_seed_1299_...pth
-output/results/weights/model_abmil_uni2_seed_42_...pth
-```
-
-They are used by `xai/seed_stability.py` to compare the attention maps of different seeds. To run a new seed sweep, edit `paths.seed` in the YAML and re-run `pipeline_training_ilc.py`.
 
 ---
 

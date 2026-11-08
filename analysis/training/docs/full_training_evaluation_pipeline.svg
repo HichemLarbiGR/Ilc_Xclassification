@@ -1,0 +1,142 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1390" height="470" viewBox="0 0 1390 470" font-family="Helvetica, Arial, sans-serif">
+<title>ILC vs NST classification: full training and evaluation pipeline</title>
+<defs>
+<marker id="a" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M1 1L7 4L1 7" fill="none" stroke="#5F5E5A" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker>
+</defs>
+<rect width="1390" height="470" fill="#FFFFFF"/>
+
+<g fill="none" stroke="#B4B2A9" stroke-width="1" stroke-dasharray="5 4">
+<rect x="20" y="40" width="180" height="380" rx="14"/>
+<rect x="224" y="40" width="150" height="380" rx="14"/>
+<rect x="398" y="40" width="240" height="380" rx="14"/>
+<rect x="662" y="40" width="230" height="380" rx="14"/>
+<rect x="916" y="40" width="240" height="380" rx="14"/>
+<rect x="1180" y="40" width="190" height="380" rx="14"/>
+</g>
+<g font-size="15" font-weight="bold" fill="#2C2C2A">
+<text x="36" y="68">1. Input data</text>
+<text x="240" y="68">2. Split</text>
+<text x="414" y="68">3. Stratified K-fold CV</text>
+<text x="678" y="68">4. Final model training</text>
+<text x="932" y="68">5. Test evaluation (TTA)</text>
+<text x="1196" y="68">6. Outputs</text>
+</g>
+
+<g stroke="#5F5E5A" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round">
+<line x1="110" y1="132" x2="110" y2="155" marker-end="url(#a)"/>
+<line x1="110" y1="198" x2="110" y2="221" marker-end="url(#a)"/>
+<line x1="200" y1="284" x2="234" y2="284" marker-end="url(#a)"/>
+<line x1="299" y1="256" x2="299" y2="153" marker-end="url(#a)"/>
+<line x1="299" y1="312" x2="299" y2="333" marker-end="url(#a)"/>
+<line x1="362" y1="122" x2="408" y2="122" marker-end="url(#a)"/>
+<line x1="518" y1="160" x2="518" y2="177" marker-end="url(#a)"/>
+<line x1="518" y1="292" x2="518" y2="309" marker-end="url(#a)"/>
+<line x1="638" y1="284" x2="660" y2="284" marker-end="url(#a)"/>
+<line x1="777" y1="156" x2="777" y2="173" marker-end="url(#a)"/>
+<line x1="777" y1="264" x2="777" y2="281" marker-end="url(#a)"/>
+<line x1="892" y1="284" x2="914" y2="284" marker-end="url(#a)"/>
+<line x1="1036" y1="156" x2="1036" y2="173" marker-end="url(#a)"/>
+<line x1="1036" y1="242" x2="1036" y2="259" marker-end="url(#a)"/>
+<line x1="1156" y1="284" x2="1178" y2="284" marker-end="url(#a)"/>
+<path d="M299 392 L299 445 L1036 445 L1036 423" stroke="#888780" stroke-dasharray="5 4" marker-end="url(#a)"/>
+</g>
+<text x="668" y="437" font-size="12" fill="#5F5E5A" text-anchor="middle">held-out test set, untouched until evaluation</text>
+
+<g fill="#F1EFE8" stroke="#5F5E5A" stroke-width="1">
+<rect x="32" y="84" width="156" height="48" rx="8"/>
+<rect x="32" y="158" width="156" height="40" rx="8"/>
+<rect x="32" y="224" width="156" height="48" rx="8"/>
+<rect x="32" y="296" width="156" height="48" rx="8"/>
+<rect x="236" y="94" width="126" height="56" rx="8"/>
+<rect x="236" y="256" width="126" height="56" rx="8"/>
+<rect x="236" y="336" width="126" height="56" rx="8" stroke-dasharray="5 3"/>
+</g>
+<g font-size="14" font-weight="bold" fill="#2C2C2A" text-anchor="middle">
+<text x="110" y="107">TCGA-BRCA slides</text>
+<text x="110" y="183">Patches</text>
+<text x="110" y="247">H-optimus-0</text>
+<text x="110" y="319">Clinical labels</text>
+<text x="299" y="118">train_val</text>
+<text x="299" y="280">Global split</text>
+<text x="299" y="360">test</text>
+</g>
+<g font-size="12" fill="#5F5E5A" text-anchor="middle">
+<text x="110" y="124">H&amp;E</text>
+<text x="110" y="265">embeddings</text>
+<text x="110" y="337">ILC (1) vs NST (0)</text>
+<text x="299" y="136">~80%</text>
+<text x="299" y="298">fixed</text>
+<text x="299" y="378">~20%, held out</text>
+</g>
+<text x="110" y="289" font-size="14" fill="#5F5E5A" text-anchor="middle">+</text>
+
+<g fill="#EEEDFE" stroke="#534AB7" stroke-width="1">
+<rect x="410" y="84" width="216" height="76" rx="8"/>
+<rect x="410" y="180" width="216" height="112" rx="8"/>
+<rect x="674" y="84" width="206" height="72" rx="8"/>
+<rect x="674" y="176" width="206" height="88" rx="8"/>
+<rect x="674" y="284" width="206" height="56" rx="8"/>
+<rect x="928" y="84" width="216" height="72" rx="8"/>
+</g>
+<g fill="#FFFFFF" stroke="#534AB7" stroke-width="1">
+<rect x="421" y="116" width="34" height="24" rx="4"/>
+<rect x="461" y="116" width="34" height="24" rx="4"/>
+<rect x="501" y="116" width="34" height="24" rx="4"/>
+<rect x="541" y="116" width="34" height="24" rx="4"/>
+<rect x="581" y="116" width="34" height="24" rx="4"/>
+</g>
+<g font-size="11" fill="#3C3489" text-anchor="middle">
+<text x="438" y="132">F1</text>
+<text x="478" y="132">F2</text>
+<text x="518" y="132">F3</text>
+<text x="558" y="132">F4</text>
+<text x="598" y="132">F5</text>
+</g>
+<g font-size="14" font-weight="bold" fill="#3C3489" text-anchor="middle">
+<text x="518" y="106">Stratified K-fold (k = 5)</text>
+<text x="518" y="204">For each fold</text>
+<text x="777" y="108">Monitoring subset</text>
+<text x="777" y="200">Monitoring drives</text>
+<text x="777" y="308">Restore best checkpoint</text>
+<text x="1036" y="108">Test-time augmentation</text>
+</g>
+<g font-size="12" fill="#534AB7" text-anchor="middle">
+<text x="518" y="154">train / val in each fold</text>
+<text x="518" y="226">AdamW + ReduceLROnPlateau</text>
+<text x="518" y="244">Weighted CE + label smoothing</text>
+<text x="518" y="262">Early stopping on val loss</text>
+<text x="518" y="280">Restore best checkpoint</text>
+<text x="777" y="128">stratified, ~10% of train_val</text>
+<text x="777" y="146">no gradient on it</text>
+<text x="777" y="220">LR scheduling</text>
+<text x="777" y="237">early stopping</text>
+<text x="777" y="254">checkpointing</text>
+<text x="777" y="326">on the monitoring subset</text>
+<text x="1036" y="128">n_tta = 5 random patch samplings</text>
+<text x="1036" y="146">→ average probabilities</text>
+</g>
+
+<g fill="#E1F5EE" stroke="#0F6E56" stroke-width="1">
+<rect x="410" y="312" width="216" height="48" rx="8"/>
+<rect x="928" y="176" width="216" height="66" rx="8"/>
+<rect x="928" y="262" width="216" height="52" rx="8"/>
+<rect x="1192" y="84" width="166" height="66" rx="8"/>
+<rect x="1192" y="172" width="166" height="52" rx="8"/>
+</g>
+<g font-size="14" font-weight="bold" fill="#085041" text-anchor="middle">
+<text x="518" y="332">CV metrics</text>
+<text x="1036" y="200">Metrics</text>
+<text x="1036" y="286">95% bootstrap CIs</text>
+<text x="1275" y="108">results JSON</text>
+<text x="1275" y="196">Model weights</text>
+</g>
+<g font-size="12" fill="#0F6E56" text-anchor="middle">
+<text x="518" y="350">mean ± spread across folds</text>
+<text x="1036" y="220">Acc, Precision, Recall,</text>
+<text x="1036" y="236">F1-macro, AUC</text>
+<text x="1036" y="304">n = 2000</text>
+<text x="1275" y="128">config + folds</text>
+<text x="1275" y="144">+ test CIs</text>
+<text x="1275" y="214">.pth (final model)</text>
+</g>
+</svg>

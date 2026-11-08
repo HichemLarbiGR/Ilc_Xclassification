@@ -1,0 +1,110 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1392" height="530" viewBox="0 0 1392 530" font-family="Helvetica, Arial, sans-serif">
+<title>Inter-seed attention stability analysis in MIL</title>
+<defs>
+<marker id="a" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M1 1L7 4L1 7" fill="none" stroke="#5F5E5A" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker>
+</defs>
+<rect width="1392" height="530" fill="#FFFFFF"/>
+
+<g fill="none" stroke="#B4B2A9" stroke-width="1" stroke-dasharray="5 4">
+<rect x="20" y="40" width="250" height="470" rx="14"/>
+<rect x="296" y="40" width="240" height="470" rx="14"/>
+<rect x="562" y="40" width="544" height="470" rx="14"/>
+<rect x="1132" y="40" width="240" height="470" rx="14"/>
+</g>
+<g font-size="15" font-weight="bold" fill="#2C2C2A">
+<text x="36" y="68">1. Multi-seed training</text>
+<text x="312" y="68">2. Inference and extraction</text>
+<text x="578" y="68">3. Pairwise comparison, per slide</text>
+<text x="1148" y="68">4. Visual output</text>
+</g>
+
+<g stroke="#5F5E5A" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round">
+<line x1="145" y1="214" x2="145" y2="240" marker-end="url(#a)"/>
+<line x1="254" y1="264" x2="262" y2="264"/>
+<line x1="254" y1="314" x2="262" y2="314"/>
+<line x1="254" y1="364" x2="262" y2="364"/>
+<line x1="254" y1="414" x2="262" y2="414"/>
+<line x1="254" y1="464" x2="262" y2="464"/>
+<line x1="262" y1="264" x2="262" y2="464"/>
+<line x1="262" y1="364" x2="309" y2="364" marker-end="url(#a)"/>
+<line x1="416" y1="274" x2="416" y2="333" marker-end="url(#a)"/>
+<line x1="416" y1="392" x2="416" y2="421" marker-end="url(#a)"/>
+<path d="M520 452 L549 452 L549 300 L575 300" marker-end="url(#a)"/>
+<line x1="728" y1="300" x2="746" y2="300"/>
+<line x1="746" y1="180" x2="746" y2="420"/>
+<line x1="746" y1="180" x2="763" y2="180" marker-end="url(#a)"/>
+<line x1="746" y1="420" x2="763" y2="420" marker-end="url(#a)"/>
+<line x1="914" y1="180" x2="939" y2="180" marker-end="url(#a)"/>
+<line x1="914" y1="420" x2="939" y2="420" marker-end="url(#a)"/>
+<line x1="1090" y1="180" x2="1146" y2="180" marker-end="url(#a)"/>
+<line x1="1090" y1="420" x2="1146" y2="420" marker-end="url(#a)"/>
+</g>
+
+<g fill="#F1EFE8" stroke="#5F5E5A" stroke-width="1">
+<rect x="36" y="90" width="218" height="54" rx="8"/>
+<rect x="36" y="160" width="218" height="54" rx="8"/>
+<rect x="312" y="220" width="208" height="54" rx="8"/>
+</g>
+<g font-size="14" font-weight="bold" fill="#2C2C2A" text-anchor="middle">
+<text x="145" y="113">Training data</text>
+<text x="145" y="183">H-optimus-0 embeddings</text>
+<text x="416" y="243">Test set</text>
+</g>
+<g font-size="12" fill="#5F5E5A" text-anchor="middle">
+<text x="145" y="131">identical</text>
+<text x="145" y="201">frozen</text>
+<text x="416" y="261">5 WSI slides</text>
+</g>
+<text x="145" y="157" font-size="14" fill="#5F5E5A" text-anchor="middle">+</text>
+
+<g fill="#EEEDFE" stroke="#534AB7" stroke-width="1">
+<rect x="36" y="244" width="218" height="40" rx="8"/>
+<rect x="36" y="294" width="218" height="40" rx="8"/>
+<rect x="36" y="344" width="218" height="40" rx="8"/>
+<rect x="36" y="394" width="218" height="40" rx="8"/>
+<rect x="36" y="444" width="218" height="40" rx="8"/>
+<rect x="312" y="336" width="208" height="56" rx="8"/>
+<rect x="312" y="424" width="208" height="56" rx="8"/>
+<rect x="578" y="272" width="150" height="56" rx="8"/>
+<rect x="764" y="150" width="150" height="60" rx="8"/>
+<rect x="764" y="390" width="150" height="60" rx="8"/>
+</g>
+<g font-size="14" font-weight="bold" fill="#3C3489" text-anchor="middle">
+<text x="145" y="269">Model A · seed 42</text>
+<text x="145" y="319">Model A · seed 123</text>
+<text x="145" y="369">Model A · seed 3</text>
+<text x="145" y="419">Model A · seed 4</text>
+<text x="145" y="469">Model A · seed 5</text>
+<text x="416" y="360">Inference</text>
+<text x="416" y="448">Attentions</text>
+<text x="653" y="296">Pairs (Mi, Mj)</text>
+<text x="839" y="176">Attentions</text>
+<text x="839" y="416">Top-10 %</text>
+</g>
+<g font-size="12" fill="#534AB7" text-anchor="middle">
+<text x="416" y="378">on the 5 slides</text>
+<text x="416" y="466">A(model, slide)</text>
+<text x="653" y="314">C(5,2) = 10 per slide</text>
+<text x="839" y="194">full vectors</text>
+<text x="839" y="434">patches (Sᵢ, Sⱼ)</text>
+</g>
+
+<g fill="#E1F5EE" stroke="#0F6E56" stroke-width="1">
+<rect x="940" y="150" width="150" height="60" rx="8"/>
+<rect x="940" y="390" width="150" height="60" rx="8"/>
+<rect x="1147" y="150" width="210" height="60" rx="8"/>
+<rect x="1147" y="390" width="210" height="60" rx="8"/>
+</g>
+<g font-size="14" font-weight="bold" fill="#085041" text-anchor="middle">
+<text x="1015" y="176">Spearman (ρ)</text>
+<text x="1015" y="416">Jaccard</text>
+<text x="1252" y="176">Heatmap / boxplot</text>
+<text x="1252" y="416">Jaccard diagram</text>
+</g>
+<g font-size="12" fill="#0F6E56" text-anchor="middle">
+<text x="1015" y="194">rank correlation</text>
+<text x="1015" y="434">|Sᵢ∩Sⱼ| / |Sᵢ∪Sⱼ|</text>
+<text x="1252" y="194">overall rank stability</text>
+<text x="1252" y="434">key-region agreement</text>
+</g>
+</svg>
