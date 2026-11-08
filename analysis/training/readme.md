@@ -1,3 +1,5 @@
+```markdown
+
 \# ilc\_Xclass\_20261026 — Preprocessing pipeline
 
 
@@ -453,7 +455,7 @@ python utils/wsi\_to\_png.py data/wsi data/png\_wsi
 &#x20; ```
 
 
-
+```
 \- The file `list\_wsi\_UNI2\_emb.txt` is the authoritative mapping between
 
 &#x20; slide names and their UNI2-h embedding files; keep it under version
