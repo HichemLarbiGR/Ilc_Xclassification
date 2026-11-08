@@ -1,464 +1,357 @@
-```markdown
+<div align="center">
 
-\# ilc\_Xclass\_20261026 — Preprocessing pipeline
+# ilc_Xclass_20261026 — Analysis / Training
 
+**Training, evaluation and explainability (XAI) pipeline for a Multiple-Instance Learning model on TCGA-BRCA whole-slide images**
 
+![Python](https://img.shields.io/badge/python-3.13.2-blue?logo=python&logoColor=white)
+![Model](https://img.shields.io/badge/model-AttentionMIL-orange)
+![Foundation models](https://img.shields.io/badge/embeddings-HOPTIMUS0%20%7C%20UNI2-8A2BE2)
+![Dataset](https://img.shields.io/badge/dataset-TCGA--BRCA-green)
 
-Preprocessing utilities for a whole-slide image (WSI) classification project
+</div>
 
-(ILC / TCGA-BRCA). This folder contains the scripts and data used to:
+---
 
+## Overview
 
+This folder applies a Multiple-Instance Learning (MIL) model to TCGA-BRCA whole-slide images (WSIs), using patch embeddings from foundation models (HOPTIMUS0, UNI2). It contains everything needed to:
 
-1\. download WSIs from the GDC and UNI2-h features from Hugging Face,
+1. 📂 **Load** a predefined data split and the corresponding patch embeddings
+2. 🏋️ **Train** an AttentionMIL model with stratified K-fold cross-validation
+3. 📊 **Evaluate** it on a held-out test set (bootstrap CIs, confusion matrix, ROC curve, predictions / errors tables)
+4. 🔬 **Explain** its predictions (attention heatmaps, top/bottom patches, sanity check, leave-one-out, seed stability, deletion/insertion curves)
 
-2\. inspect the extracted HDF5 feature files,
+## Table of contents
 
-3\. generate downscaled PNG thumbnails of the slides.
+- [Repository structure](#repository-structure)
+- [Requirements](#requirements)
+- [Installation](#installation)
+- [Output layout](#output-layout)
+- [Usage](#usage)
+- [Configuration file](#configuration-file-configabmil_riskyaml)
+- [Reproducibility / seed sweep](#reproducibility--seed-sweep)
+- [Notes](#notes)
 
+---
 
+## Repository structure
 
-\---
-
-
-
-\## Repository structure
-
-
-
-```
-
-prepros/
-
-├── download\_emb\_TCGA\_BRCA.py       # Download UNI2-h features from HF Hub
-
-├── list\_wsi\_UNI2\_emb.txt           # Mapping between WSIs and UNI2-h features
-
-├── readme.md                       # (original) project notes
-
+```text
+analysis/training/
+├── pipeline_training_ilc.py         # Main training entry point (K-fold + final + test)
+├── infer_models_test_sets.py        # Global evaluation on a fixed split
+├── generate_topbottom_tiles.py      # Attention heatmap + top/bottom patches
 │
-
-├── data/                           # Datasets and thumbnails
-
-│   ├── dataset.json                # Main dataset index
-
-│   ├── dataset\_asier.json          # Dataset split (asier)
-
-│   ├── dataset\_center.json         # Dataset split (per center)
-
-│   ├── png\_wsi/                    # 1/16 PNG thumbnails of the WSIs
-
-│   └── wsi/                        # Raw whole-slide images (SVS, etc.)
-
+├── config/
+│   ├── __init__.py
+│   └── abmil_risk.yaml              # Training / evaluation / XAI configuration
 │
-
-├── HOPT0/                          # HOPT0 patch features (TCGA-BRCA)
-
-│   └── TCGA-\*-01Z-00-DX\*.h5        # One HDF5 file per WSI
-
+├── dataclass/
+│   └── config_class.py              # TrainingConfig dataclass (YAML loader + validation)
 │
-
-├── UNI2/                           # UNI2 patch features (TCGA-BRCA)
-
-│   ├── TCGA-\*-01Z-00-DX\*.h5        # One HDF5 file per WSI
-
-│   ├── TCGA-BRCA\_IDC.tar.gz        # Raw UNI2 archives
-
-│   └── TCGA-BRCA\_OTHERS.tar.gz
-
+├── dataloader/
+│   └── data_loader_bag.py           # TCGA_BRCA_BagDataset + collate_bags
 │
-
-├── UNI2-h\_features/                # Downloaded UNI2-h features
-
-│   └── HOPT\_TCGA/                  # Extracted UNI2-h embeddings
-
+├── models/
+│   └── MIL_models.py                # AttentionMIL, build_model, EarlyStopping
 │
-
+├── train/
+│   ├── training_utils.py            # train_one_epoch, evaluate_model, train_fold,
+│   │                                # train_final_model, evaluate_model_tta,
+│   │                                # run_stratified_kfold_training
+│   ├── bootstrap.py                 # Percentile bootstrap confidence intervals
+│   └── metrics.py                   # Accuracy, F1, AUC, AUPRC, sensitivity, specificity
+│
 ├── utils/
-
-│   ├── gdc-client                  # GDC download binary (not versioned)
-
-│   ├── get\_wsi\_tcga\_pred.sh        # Download WSIs from the GDC by UUID
-
-│   ├── explore\_h5.py               # Inspect an HDF5 feature file
-
-│   └── wsi\_to\_png.py               # WSI → 1/16 PNG thumbnails
-
+│   ├── utils.py                     # Logging, JSON export, naming, seeds
+│   ├── figures.py                   # Confusion matrix + ROC curve (SVG)
+│   └── reports_predictions.py       # Per-slide predictions table
 │
-
+├── xai/
+│   ├── utils.py                     # Heatmaps, top/bottom patches, LOO, seed stability,
+│   │                                # deletion/insertion curves, plotting helpers
+│   ├── sanity_check.py              # Compare attention of trained vs randomized model
+│   ├── leave_one_out.py             # LOO analysis of the attention maps
+│   ├── seed_stability.py            # Attention stability across training seeds
+│   └── deletion_insertion.py        # Faithfulness evaluation of the attention maps
+│
+├── output/
+│   └── results/                     # All run outputs (see "Output layout")
+│       ├── 20261105_162458_46c9e8/  # One folder per run (run_id)
+│       ├── ...
+│       ├── logging_ilc_model_<jobid>.out   # SLURM / batch stdout
+│       ├── logging_ilc_model_<jobid>.err   # SLURM / batch stderr
+│       └── weights/                 # Trained model checkpoints
+│           └── model_<arch>_<fm>_seed_<seed>_<run_id>.pth
+│
 ├── requirements.txt
-
 └── README.md
-
 ```
 
+---
 
+## Requirements
 
-> \*\*Note\*\* : les dossiers `data/wsi/`, `data/png\_wsi/`, `HOPT0/`,
+- **Python 3.13.2** — the exact version used to develop and test this project.
+- No C toolchain needed: all Python dependencies ship `cp313` wheels.
 
-> `UNI2/`, `UNI2-h\_features/` contiennent des \*\*données volumineuses\*\* et ne
+<details>
+<summary><b>Setting up Python 3.13.2 (pyenv / conda)</b></summary>
 
-> doivent pas être versionnés (ajouter à `.gitignore`).
-
-
-
-\---
-
-
-
-\## Requirements
-
-
-
-\- \*\*Python 3.13.2\*\* (exact version used to develop and test this project).
-
-\- A working C toolchain is \*\*not\*\* required: all Python dependencies below
-
-&#x20; ship `cp313` wheels.
-
-
-
-> If you use `pyenv`:
-
-> ```bash
-
-> pyenv install 3.13.2
-
-> pyenv local 3.13.2
-
-> ```
-
->
-
-> If you use `conda`:
-
-> ```bash
-
-> conda create -n ilc\_xclass python=3.13.2
-
-> conda activate ilc\_xclass
-
-> ```
-
-
-
-\---
-
-
-
-\## Installation
-
-
-
-\### 1. Python environment
-
-
+**pyenv**
 
 ```bash
+pyenv install 3.13.2
+pyenv local 3.13.2
+```
 
+**conda**
+
+```bash
+conda create -n ilc_xclass python=3.13.2
+conda activate ilc_xclass
+```
+
+</details>
+
+---
+
+## Installation
+
+### 1. Python environment
+
+```bash
 python3.13 -m venv .venv
-
-source .venv/bin/activate          # Windows: .venv\\Scripts\\activate
-
+source .venv/bin/activate          # Windows: .venv\Scripts\activate
 python --version                   # should print: Python 3.13.2
-
 pip install --upgrade pip
-
 pip install -r requirements.txt
-
 ```
 
+### 2. System dependencies
 
-
-\### 2. System dependencies
-
-
-
-\*\*OpenSlide\*\* (required by `openslide-python`) must be installed at the
-
-system level — `pip` only installs the Python bindings:
-
-
+[**OpenSlide**](https://openslide.org/) (required by `openslide-python`, used by the XAI scripts to extract patches from the WSI) must be installed at the system level — `pip` only installs the Python bindings.
 
 ```bash
-
-\# Ubuntu / Debian
-
+# Ubuntu / Debian
 sudo apt-get install openslide-tools libopenslide0
 
-
-
-\# macOS
-
+# macOS
 brew install openslide
 
-
-
-\# Conda (cross-platform)
-
+# Conda (cross-platform)
 conda install -c conda-forge openslide
-
 ```
 
+### 3. Data layout (relative to `prepros/`)
 
+The training scripts expect the following paths (configurable in `config/abmil_risk.yaml`):
 
-\### 3. `gdc-client`
+| Key                                | Expected location                              |
+|------------------------------------|------------------------------------------------|
+| `paths.h5_dir`                     | Root of the HDF5 features (e.g. `prepros/`)    |
+| `paths.path_results`               | `output/results/` (created at runtime)         |
+| `paths.save_model_path`            | `output/results/weights/`                      |
+| `paths.json_split_wsi_target_path` | Global split JSON (train/val/test slides)      |
+| `paths.png_path`                   | `prepros/data/png_wsi/` (1/16 thumbnails)      |
+| `paths.wsi_path`                   | `prepros/data/wsi/` (raw WSIs)                 |
 
+> [!NOTE]
+> The features of a foundation model `<FM>` are read from `<h5_dir>/<FM_UPPER>/`, one `.h5` file per slide.
 
+---
 
-`gdc-client` is \*\*not\*\* a pip package. Download the binary for your platform
+## Output layout
 
-from the \[GDC Data Transfer Tool page](https://gdc.cancer.gov/access-data/gdc-data-transfer-tool)
+Every training run creates a **run folder** whose name is the run ID (`YYYYMMDD_HHMMSS_xxxxxx`):
 
-and place it in `prepros/utils/`:
+```text
+output/results/
+├── <run_id>/
+│   ├── <run_id>.json                          # Config + folds + test metrics (with CIs)
+│   ├── previsions_completes_<run_id>.csv      # All predictions, all splits
+│   ├── autopsie_erreurs_global_<run_id>.csv   # Errors sorted by model confidence
+│   ├── confusion_matrix_<arch>_<fm>_<run_id>.svg
+│   ├── roc_curve_<arch>_<fm>_<run_id>.svg
+│   └── xai/                                   # Heatmaps, patches, histograms, curves
+├── weights/
+│   └── model_<arch>_<fm>_seed_<seed>_<run_id>.pth
+└── logging_ilc_model_<jobid>.{out,err}        # Batch / SLURM logs
+```
 
+> [!NOTE]
+> Figures and CSVs are only produced by `infer_models_test_sets.py` (the training script only writes `<run_id>.json` and the `.pth`). The `xai/` sub-folder is produced by the scripts under `xai/` and by `generate_topbottom_tiles.py`.
 
+---
+
+## Usage
+
+### 🏋️ Train the model (K-fold + final model + test)
 
 ```bash
-
-chmod +x prepros/utils/gdc-client
-
+python pipeline_training_ilc.py
 ```
 
+This runs:
 
+1. a stratified K-fold cross-validation on the train+validation split,
+2. a final training on the whole train+validation set (with a stratified monitoring subset for early stopping / LR scheduling),
+3. an evaluation of this final model on the test set with test-time augmentation (TTA),
+4. 95 % bootstrap confidence intervals on the test metrics,
+5. the export of the results (JSON) and of the final model weights.
 
-\---
+**Outputs**
 
+- `output/results/<run_id>/<run_id>.json`
+- `output/results/weights/model_<arch>_<fm>_seed_<seed>_<run_id>.pth`
 
-
-\## Data layout
-
-
-
-| Folder / file                         | Content                                                                 |
-
-|---------------------------------------|-------------------------------------------------------------------------|
-
-| `data/wsi/`                           | Raw WSIs (`\*.svs`, `\*.ndpi`, …)                                         |
-
-| `data/png\_wsi/`                       | 1/16 PNG thumbnails generated by `wsi\_to\_png.py`                        |
-
-| `data/dataset.json`                   | Main dataset index (slide ↔ label ↔ split)                              |
-
-| `data/dataset\_asier.json`             | Dataset variant (asier split)                                           |
-
-| `data/dataset\_center.json`            | Dataset variant (center-wise split)                                     |
-
-| `HOPT0/\*.h5`                          | HOPT0 patch features, one HDF5 file per WSI                             |
-
-| `UNI2/\*.h5`                           | UNI2 patch features, one HDF5 file per WSI                              |
-
-| `UNI2/TCGA-BRCA\_IDC.tar.gz`           | Raw UNI2 archive (IDC subtype)                                          |
-
-| `UNI2/TCGA-BRCA\_OTHERS.tar.gz`        | Raw UNI2 archive (other subtypes)                                       |
-
-| `UNI2-h\_features/HOPT\_TCGA/`          | Extracted UNI2-h embeddings                                             |
-
-| `list\_wsi\_UNI2\_emb.txt`               | Mapping between WSIs and UNI2-h embedding files                         |
-
-
-
-\---
-
-
-
-\## Usage
-
-
-
-\### Download WSIs from the GDC
-
-
-
-The script downloads a fixed list of open-access WSIs (identified by their
-
-GDC file UUIDs) into the \*\*current working directory\*\*, one sub-folder per
-
-file.
-
-
+### 📊 Evaluate a trained model on a fixed split
 
 ```bash
-
-cd /path/to/where/data/should/be/stored
-
-bash /home/h\_larbi/ilc\_Xclass\_20261026/prepros/utils/get\_wsi\_tcga\_pred.sh
-
+python infer_models_test_sets.py
 ```
 
+The script loads the checkpoint given by `evaluation.infer_model` in `config/abmil_risk.yaml` and produces, in `output/results/<model_id>/`:
 
+- `confusion_matrix_<arch>_<fm>_<model_id>.<ext>` (SVG by default)
+- `roc_curve_<arch>_<fm>_<model_id>.<ext>`
+- `previsions_completes_<model_id>.csv` (all predictions, all splits)
+- `autopsie_erreurs_global_<model_id>.csv` (errors sorted by decreasing model confidence)
 
-> Controlled-access files would require an authentication token
+The 15 most confident test errors are also written to the log.
 
-> (`-t <token.txt>`); the files listed here are open-access.
-
-
-
-\### Download UNI2-h features (TCGA-BRCA)
-
-
-
-The UNI2-h patch features are hosted on the Hugging Face Hub in the gated
-
-dataset \[`MahmoodLab/UNI2-h-features`](https://huggingface.co/datasets/MahmoodLab/UNI2-h-features).
-
-
+### 🔥 Generate attention heatmaps and top/bottom patches
 
 ```bash
-
-python download\_emb\_TCGA\_BRCA.py
-
+python generate_topbottom_tiles.py --config config/abmil_risk.yaml \
+    --ids TCGA-A2-A04Y TCGA-A7-A426 TCGA-AC-A2FO
 ```
 
+For each slide, the script writes to `output/results/<model_id>/xai/<slide_id>/`:
 
+- `heatmap.<ext>` — attention overlaid on the 1/16 PNG
+- `top/` — the `xai.top_k` most attended patches (read from the WSI)
+- `bottom/` — the `xai.bottom_k` least attended patches
 
-Requirements:
+### 🔬 XAI analyses
 
-
-
-\- a Hugging Face account with access to the dataset,
-
-\- a personal access token (set it in the script or, preferably, export
-
-&#x20; `HF\_TOKEN` in the environment).
-
-
-
-The archives `TCGA-BRCA\_IDC.tar.gz` and `TCGA-BRCA\_OTHERS.tar.gz` are
-
-downloaded into `UNI2-h\_features/` and are \*\*not\*\* extracted automatically.
-
-After download, the archives should be moved to `UNI2/` and extracted so
-
-that the `.h5` files end up next to the others.
-
-
-
-\### Inspect an HDF5 feature file
-
-
+All XAI scripts share the same CLI (`--config`, plus IDs):
 
 ```bash
+# Sanity check: attention of the trained model vs randomized model
+python -m xai.sanity_check --config config/abmil_risk.yaml --ids <id> [<id> ...]
 
-python utils/explore\_h5.py
+# Leave-one-out: Spearman correlation between attention and LOO scores
+python -m xai.leave_one_out --config config/abmil_risk.yaml --ids <id> [<id> ...]
 
+# Seed stability: compare attention maps of two models trained with different seeds
+python -m xai.seed_stability --config config/abmil_risk.yaml \
+    --model_ids <id1> <id2> [...] --wsi_ids <slide_id> [<slide_id> ...]
+
+# Faithfulness: deletion / insertion curves with random and inverted baselines
+python -m xai.deletion_insertion --config config/abmil_risk.yaml --ids <id> [<id> ...]
 ```
 
+Histograms / curves are saved in `output/results/<model_id>/xai/` (PNG, 300 dpi).
 
+---
 
-Edit the `fpath` variable in the script to point to the `.h5` file you want
+## Configuration file (`config/abmil_risk.yaml`)
 
-to inspect (e.g. one of the files in `HOPT0/` or `UNI2/`). The script prints:
+The YAML file must contain the sections `paths`, `model`, `training`, `evaluation` and `xai`.
 
+> [!IMPORTANT]
+> Relative paths are resolved relative to the **parent of the folder containing the YAML file** — except `png_path` and `wsi_path`, which are used as written.
 
+<details>
+<summary><b>Example skeleton</b></summary>
 
-\- file name and size,
+```yaml
+paths:
+  h5_dir: ../../../prepros
+  path_results: ../output/results
+  save_model_path: ../output/results/weights
+  json_split_wsi_target_path: ../../../prepros/data/dataset.json
+  png_path: ../../../prepros/data/png_wsi
+  wsi_path: ../../../prepros/data/wsi
+  seed: 42
 
-\- root attributes,
+model:
+  architecture_name: abmil
+  foundation_model_name: UNI2
+  input_dim: 1536
+  num_classes: 2
+  classes_name: [IDC, OTHERS]
+  class_weights: [1.0, 4.0]
 
-\- recursive structure (groups / datasets),
+training:
+  epochs: 100
+  batch_size: 1
+  learning_rate: 1.0e-4
+  weight_decay_kfold: 1.0e-4
+  weight_decay_final: 1.0e-4
+  label_smoothing: 0.0
+  patience_stop: 20
+  factor_sche: 0.5
+  patience_sche: 5
+  min_lr_sche: 1.0e-6
 
-\- per-dataset details (shape, dtype, size, compression, attributes,
+evaluation:
+  n_splits: 5
+  test_size: 0.2
+  monitor_test_size: 0.2
+  bootstrap_niter: 2000
+  n_tta: 10
+  infer_model: output/results/weights/model_abmil_uni2_seed_42_20261105_222108_877e2e.pth
+  subset_name: test
+  figures_extension: svg
 
-&#x20; min / max / mean / std, NaN count),
-
-\- a short head preview of each dataset.
-
-
-
-\### Generate 1/16 PNG thumbnails of WSIs
-
-
-
-```bash
-
-python utils/wsi\_to\_png.py data/wsi data/png\_wsi
-
+xai:
+  scale_factor: 16
+  top_k: 20
+  bottom_k: 20
+  score_threshold: 0.1
+  cmap: jet
+  alpha: 0.5
+  xai_model: abmil
+  top_k_perc: 10
 ```
 
+</details>
 
+---
 
-\- Reads each WSI at the pyramid level closest to a 1/16 downsample factor
+## Reproducibility / seed sweep
 
-&#x20; and resizes to the exact target size when needed.
+The repository already contains checkpoints for several seeds of the same architecture and foundation model, e.g.:
 
-\- Supported extensions: `.svs`, `.ndpi`, `.mrxs`, `.tif`, `.tiff`, `.vms`,
-
-&#x20; `.scn`.
-
-\- Output files are named `<slide\_name>\_1\_16.png`.
-
-
-
-\---
-
-
-
-\## Notes
-
-
-
-\- \*\*Python version\*\*: this project targets \*\*Python 3.13.2\*\*. Dependency
-
-&#x20; lower bounds in `requirements.txt` are chosen so that `cp313` wheels exist
-
-&#x20; on PyPI (no source builds needed). Older Python interpreters are not
-
-&#x20; supported by these versions.
-
-\- The `gdc-client` binary is intentionally \*\*not\*\* committed to the
-
-&#x20; repository (large, platform-specific); install it as described above.
-
-\- The Hugging Face token in `download\_emb\_TCGA\_BRCA.py` should be replaced
-
-&#x20; by your own token. For production use, prefer reading it from an
-
-&#x20; environment variable:
-
-
-
-&#x20; ```python
-
-&#x20; import os
-
-&#x20; login(token=os.environ\["HF\_TOKEN"])
-
-&#x20; ```
-
-
-
-\- Large data (`data/wsi/`, `data/png\_wsi/`, `HOPT0/`, `UNI2/`,
-
-&#x20; `UNI2-h\_features/`) should be excluded from version control. Suggested
-
-&#x20; `.gitignore` snippet:
-
-
-
-&#x20; ```gitignore
-
-&#x20; data/wsi/
-
-&#x20; data/png\_wsi/
-
-&#x20; HOPT0/
-
-&#x20; UNI2/
-
-&#x20; UNI2-h\_features/
-
-&#x20; utils/gdc-client
-
-&#x20; \*.tar.gz
-
-&#x20; ```
-
-
+```text
+output/results/weights/model_abmil_hopt0_seed_42_...pth
+output/results/weights/model_abmil_hopt0_seed_123_...pth
+output/results/weights/model_abmil_hopt0_seed_456_...pth
+output/results/weights/model_abmil_hopt0_seed_789_...pth
+output/results/weights/model_abmil_hopt0_seed_1299_...pth
+output/results/weights/model_abmil_uni2_seed_42_...pth
 ```
-\- The file `list\_wsi\_UNI2\_emb.txt` is the authoritative mapping between
 
-&#x20; slide names and their UNI2-h embedding files; keep it under version
+They are used by `xai/seed_stability.py` to compare the attention maps of different seeds. To run a new seed sweep, edit `paths.seed` in the YAML and re-run `pipeline_training_ilc.py`.
 
-&#x20; control.
+---
 
+## Notes
+
+- **Python version** — this project targets **Python 3.13.2**. Dependency lower bounds in `requirements.txt` are chosen so that `cp313` wheels exist on PyPI (no source builds needed). Older Python interpreters are not supported by these versions.
+- **`matplotlib` backend** — figures are generated with the non-interactive `Agg` backend (see `utils/figures.py`), so the scripts run on servers without a display.
+- **`__pycache__/`** — the folder contains a mix of `cpython-313` and `cpython-39` bytecode files. The `cpython-39` ones are leftovers from a previous Python installation and can be safely deleted.
+- **Large data** — `*.pth` checkpoints, `.h5` features and `output/results/` should be excluded from version control. Suggested `.gitignore`:
+
+  ```gitignore
+  output/results/weights/*.pth
+  output/results/*/xai/
+  output/results/logging_ilc_model_*.{out,err}
+  __pycache__/
+  *.pyc
+  ```
+
+- **Machine-specific config** — `config/abmil_risk.yaml` may contain absolute paths and the path of the checkpoint to evaluate (`evaluation.infer_model`). Keep machine-specific versions out of version control if needed.
