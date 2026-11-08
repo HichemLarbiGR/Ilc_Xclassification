@@ -1,6 +1,6 @@
 <div align="center">
 
-# ilc_Xclass_20261026 — Clinical data preparation (R)
+# Invasive Lobular Carcinoma X-classification : clinical data preparation (R)
 
 **R pipeline for the TCGA-BRCA ILC vs. NST classification project**
 
