@@ -1,5 +1,6 @@
 import argparse
 from pathlib import Path
+import copy
 
 import h5py
 import matplotlib.pyplot as plt
@@ -8,6 +9,7 @@ import openslide
 import torch
 from matplotlib.patches import Rectangle
 
+from pathlib import Path
 
 from dataclass.config_class import TrainingConfig
 from models.MIL_models import build_model_class
@@ -143,28 +145,32 @@ def process_slide_sanity_check(slide, model, cfg, device, out_root):
     stem = Path(slide["filename"]).stem
     out_dir = out_root / slide_id
     out_dir.mkdir(parents=True, exist_ok=True)
-    
-    #Inference not randomized weights
-    features, coords, ps0, ps = load_h5(Path(build_name_h5_path(cfg.h5_dir, cfg.foundation_model_name)) / slide["filename"])
+
+    # Inférence avec les poids entraînés
+    features, coords, ps0, ps = load_h5(
+        Path(build_name_h5_path(cfg.h5_dir, cfg.foundation_model_name)) / slide["filename"]
+    )
     attn, probs = get_attention(model, features, device)
 
-    #Randomized weights
+    # Inférence avec les poids randomisés
     model_rd = randomize_weights(model)
-    features_rd, coords_rd, ps0_rd, ps_rd = load_h5(Path(build_name_h5_path(cfg.h5_dir, cfg.foundation_model_name)) / slide["filename"])
-    attn_rd, probs_rd = get_attention(model, features, device)
+    features_rd, coords_rd, ps0_rd, ps_rd = load_h5(
+        Path(build_name_h5_path(cfg.h5_dir, cfg.foundation_model_name)) / slide["filename"]
+    )
+    attn_rd, probs_rd = get_attention(model_rd, features_rd, device)  
 
     pred_rd = int(probs_rd.argmax())
     title_rd = (f"{slide_id} | vrai: {cfg.classes_name[slide['target']]} | "
-             f"prédit: {cfg.classes_name[pred_rd]} ({probs_rd[pred_rd]:.2f})")
- 
-    plot_heatmap(Path(cfg.png_path) / f"{stem}_1_{cfg.scale_factor}.png", coords_rd, ps0_rd, attn_rd, title_rd,
-                 out_dir / f"heatmap_sanity_check.{cfg.figures_extension}", cfg)
+                f"prédit: {cfg.classes_name[pred_rd]} ({probs_rd[pred_rd]:.2f})")
 
-    
+    plot_heatmap(
+        Path(cfg.png_path) / f"{stem}_1_{cfg.scale_factor}.png",
+        coords_rd, ps0_rd, attn_rd, title_rd,
+        out_dir / f"heatmap_sanity_check.{cfg.figures_extension}",
+        cfg,
+    )
 
-    
     return spearman_attn(attn, attn_rd)
-
 def jaccard_coord(list_a, list_b):
     coef_jc = distance.jaccard(list_a, list_b)
     return coef_jc
@@ -219,13 +225,14 @@ def plot_histogram(x, title, out, file):
     plt.close(fig)
 
 def find_model_by_id(id_patterns, model_path):
-    
+    model_path = Path(model_path)
     list_models = []
 
     for id_p in id_patterns:
-        model_id_p_list = glob.glob(Path(model_path) / f'./.*{id_p}.*')
-        list_models += list_models
-    
+        list_models.extend(
+            str(p) for p in model_path.glob(f'*{id_p}*.pth')
+        )
+
     return list_models
 
 
@@ -253,62 +260,66 @@ def process_seed_analysis(
     top_k_n = round(len(coords) * k_percent)
 
     # Top-K pour Model 1 (tri décroissant pour garder les plus fortes attentions)
-    data1 = [(attn1[i], coords[i]) for i in range(len(coords))]
+    data1 = [(attn1[i], tuple(coords[i])) for i in range(len(coords))]
     data1.sort(key=itemgetter(0), reverse=True)
     top_k_coords1 = {coord for _, coord in data1[:top_k_n]}
 
     # Top-K pour Model 2
-    data2 = [(attn2[i], coords[i]) for i in range(len(coords))]
+    data2 = [(attn2[i], tuple(coords[i])) for i in range(len(coords))]
     data2.sort(key=itemgetter(0), reverse=True)
     top_k_coords2 = {coord for _, coord in data2[:top_k_n]}
 
     # Création des masques binaires (0 ou 1)
-    jc_data1 = [1 if coord in top_k_coords1 else 0 for coord in coords]
-    jc_data2 = [1 if coord in top_k_coords2 else 0 for coord in coords]
+    jc_data1 = [1 if tuple(coord) in top_k_coords1 else 0 for coord in coords]
+    jc_data2 = [1 if tuple(coord) in top_k_coords2 else 0 for coord in coords]
 
+
+    print(f"len(coords)={len(coords)}, top_k_n={top_k_n}")
+    print(f"|top_k1 ∩ top_k2| = {len(top_k_coords1 & top_k_coords2)} / {top_k_n}")
+    print(f"attn1[:5]={[round(v,4) for v,_ in data1[:5]]}  attn2[:5]={[round(v,4) for v,_ in data2[:5]]}")
     return spearman_attn(attn1, attn2), jaccard_coord(jc_data1, jc_data2)
 
-
 def process_loo_analysis(slide, model, device, cfg, out_root):
-    """
-    Calcule la chute de probabilité (LOO) pour un patch spécifique.
-    """
-
     loo_list = []
+
     h5_path = (
         Path(build_name_h5_path(cfg.h5_dir, cfg.foundation_model_name))
         / slide["filename"]
     )
-    
     features, coords, _, _ = load_h5(h5_path)
 
     attn, probs = get_attention(model, features, device)
-    
-    features_occ = features.copy()
-    
+
+    # Classe de référence : classe prédite sur la slide complète
+    pred_class = int(probs.argmax())
+    p_ref = float(probs[pred_class])
+
     bg_vector = features.mean(axis=0)
 
     for patch_idx in range(len(features)):
-        features_occ[patch_idx] = bg_vector
+        features_occ = features.copy()          
+        features_occ = np.delete(features, patch_idx, axis=0)   # (N-1, D)
+        
+
         attn_occ, probs_occ = get_attention(model, features_occ, device)
-        score_loo = proba_base - proba_occ
-        loo_list.apppend(score_loo)
+        score_loo = p_ref - float(probs_occ[pred_class])   
+        loo_list.append(score_loo)
+    print(loo_list)
 
-    return spearman_attn(attn, score_loo)
+    return spearman_attn(attn, loo_list)
 
-
-def compute_deletion_insertion_curves(slide, model, device, cfg, out_root, 
-                                      step_ratio=0.05, n_steps=20):
+def compute_deletion_insertion_curves(slide, model, device, cfg, out_root, n_steps=20):
     """
     Calcule les courbes de Deletion et d'Insertion pour une lame.
-    
-    Args:
-        features: np.array [N, in_dim] - les embeddings de la lame
-        attn_scores: np.array [N] - les scores d'attention
-        step_ratio: proportion de patchs à ajouter/retirer à chaque étape (ex: 0.05 = 5%)
-        n_steps: nombre d'étapes (paliers) pour la courbe
-    """
 
+    Deletion  : on part de la lame complète, on remplace les k patches les plus
+                attendus par le patch moyen (bg_vector).
+    Insertion : on part d'une lame "vide" (que du bg_vector), on remet les k
+                patches les plus attendus.
+
+    Retourne (deletion_probs, insertion_probs, x_axis) où x_axis est la fraction
+    de patches retirés/insérés (0 → 1).
+    """
     deletion_probs = []
     insertion_probs = []
 
@@ -316,126 +327,144 @@ def compute_deletion_insertion_curves(slide, model, device, cfg, out_root,
         Path(build_name_h5_path(cfg.h5_dir, cfg.foundation_model_name))
         / slide["filename"]
     )
-    
     features, coords, _, _ = load_h5(h5_path)
 
     n_patches = len(features)
 
-    _, probs_base = get_attention(model, features, device)
-    pred_class = probs_base.argmax().item()
-    proba_base = probs_base[pred_class].item()
-    
-    features_occ = features.copy()
-    
+    attn_scores, probs_base = get_attention(model, features, device)
+    pred_class = int(probs_base.argmax().item())
+
     bg_vector = features.mean(axis=0)
-     
-    sorted_indices = np.argsort(attn_scores)[::-1] # Du plus important au moins important
-    
-    # 4. Définir les paliers (ex: 0%, 5%, 10%, ..., 100%)
+    sorted_indices = np.argsort(attn_scores)[::-1]  # plus important → moins important
+
     steps = np.linspace(0, n_patches, n_steps + 1, dtype=int)
-    
+
     for k in steps:
         # --- DELETION ---
-        # On part de l'image complète et on retire les k patchs les plus importants
         features_del = features.copy()
         if k > 0:
-            indices_to_remove = sorted_indices[:k]
-            features_del[indices_to_remove] = bg_vector
-        
+            features_del[sorted_indices[:k]] = bg_vector
         _, probs_del = get_attention(model, features_del, device)
-        deletion_probs.append(probs_del[pred_class].item())
-        
+        deletion_probs.append(float(probs_del[pred_class]))
+
         # --- INSERTION ---
-        # On part d'une image "vide" (que du background) et on ajoute les k patchs les plus importants
         features_ins = np.tile(bg_vector, (n_patches, 1))
         if k > 0:
-            indices_to_insert = sorted_indices[:k]
-            features_ins[indices_to_insert] = features[indices_to_insert]
-        
+            features_ins[sorted_indices[:k]] = features[sorted_indices[:k]]
         _, probs_ins = get_attention(model, features_ins, device)
-        insertion_probs.append(probs_ins[pred_class].item())
-        
+        insertion_probs.append(float(probs_ins[pred_class]))
+
     return deletion_probs, insertion_probs, steps / n_patches
 
-def compute_random_baseline(slide, model, device, cfg, out_root, 
-                                       n_steps=20, n_repeats=5):
+
+def compute_random_baseline(features, model, device, n_steps=20, n_repeats=5):
     """
-    Calcule la baseline aléatoire (en moyennant sur plusieurs tirages aléatoires).
+    Baseline aléatoire : même protocole mais avec un ordre de patches tiré au hasard,
+    moyenné sur n_repeats tirages.
     """
     n_patches = len(features)
     bg_vector = features.mean(axis=0)
-    
+
     _, probs_base = get_attention(model, features, device)
-    pred_class = probs_base.argmax().item()
-    
+    pred_class = int(probs_base.argmax().item())
+
     steps = np.linspace(0, n_patches, n_steps + 1, dtype=int)
     rand_del_probs = []
     rand_ins_probs = []
-    
+    rng = np.random.default_rng(0)
+
     for k in steps:
         del_probs_k = []
         ins_probs_k = []
-        
+
         for _ in range(n_repeats):
-            # Tirage aléatoire des indices
-            random_indices = np.random.permutation(n_patches)
-            
+            random_indices = rng.permutation(n_patches)
+
             # Deletion aléatoire
             features_del = features.copy()
             if k > 0:
                 features_del[random_indices[:k]] = bg_vector
-        
             _, probs_del = get_attention(model, features_del, device)
-            del_probs_k.append(probs_del[pred_class].item())
-            
+            del_probs_k.append(float(probs_del[pred_class]))
+
             # Insertion aléatoire
             features_ins = np.tile(bg_vector, (n_patches, 1))
             if k > 0:
                 features_ins[random_indices[:k]] = features[random_indices[:k]]
-    
-            _, probs_ins = get_attention(model, tensor_ins, device)
-            ins_probs_k.append(probs_ins[pred_class].item())
-            
-        rand_del_probs.append(np.mean(del_probs_k))
-        rand_ins_probs.append(np.mean(ins_probs_k))
-        
+            _, probs_ins = get_attention(model, features_ins, device)
+            ins_probs_k.append(float(probs_ins[pred_class]))
+
+        rand_del_probs.append(float(np.mean(del_probs_k)))
+        rand_ins_probs.append(float(np.mean(ins_probs_k)))
+
     return rand_del_probs, rand_ins_probs
 
 
-def curve_plot(x_axis, list_attn, list_rand, xlab, title, out, file):
+def compute_inverted_attention_curves(slide, model, device, cfg, out_root, n_steps=20):
+    """
+    Baseline 'attention inversée' : on retire/insère les patches à FAIBLE attention
+    d'abord. Si l'attention est informative, ces courbes doivent être clairement
+    différentes des courbes 'attention'.
+    """
+    h5_path = (
+        Path(build_name_h5_path(cfg.h5_dir, cfg.foundation_model_name))
+        / slide["filename"]
+    )
+    features, coords, _, _ = load_h5(h5_path)
 
+    n_patches = len(features)
+    attn_scores, probs_base = get_attention(model, features, device)
+    pred_class = int(probs_base.argmax().item())
+
+    bg_vector = features.mean(axis=0)
+    sorted_inv = np.argsort(attn_scores)  # faible attention d'abord
+
+    steps = np.linspace(0, n_patches, n_steps + 1, dtype=int)
+    del_probs = []
+    ins_probs = []
+
+    for k in steps:
+        features_del = features.copy()
+        if k > 0:
+            features_del[sorted_inv[:k]] = bg_vector
+        _, p = get_attention(model, features_del, device)
+        del_probs.append(float(p[pred_class]))
+
+        features_ins = np.tile(bg_vector, (n_patches, 1))
+        if k > 0:
+            features_ins[sorted_inv[:k]] = features[sorted_inv[:k]]
+        _, p = get_attention(model, features_ins, device)
+        ins_probs.append(float(p[pred_class]))
+
+    return del_probs, ins_probs
+
+
+# ----------------------------------------------------------------------
+# PLOT
+# ----------------------------------------------------------------------
+def curve_plot(x_axis, list_attn, list_rand, list_inv, xlab, title, out, file):
     fig, ax = plt.subplots(figsize=(12, 8), facecolor='white')
 
-    # Historigramme épuré (Indigo moderne avec contours blancs)
-    ax.plot(
-        x_axis, list_attn, label="Attention", color="red", linewidth=2
-        )
-    
-    ax.plot(
-        x_axis, list_rand, label="Aléatoire", color="gray", linestyle="--"
-        )
+    ax.plot(x_axis, list_attn, label="Attention", color="red", linewidth=2)
+    ax.plot(x_axis, list_rand, label="Aléatoire", color="gray", linestyle="--", linewidth=2)
+    ax.plot(x_axis, list_inv,  label="Attention inversée", color="tab:blue", linestyle=":", linewidth=2)
 
-    # Textes et labels (Gris ardoise au lieu du noir pur)
     ax.set_xlabel(xlab, fontsize=11, fontweight='medium', color='#334155', labelpad=10)
-    ax.set_ylabel('Probability of predicted class', fontsize=11, fontweight='medium', color='#334155', labelpad=10)
+    ax.set_ylabel('Probability of predicted class', fontsize=11, fontweight='medium',
+                  color='#334155', labelpad=10)
     ax.set_title(title, fontsize=14, fontweight='bold', color='#0F172A', pad=15)
 
-    # Grille d'arrière-plan discrète (placée DERRIÈRE les barres)
     ax.set_axisbelow(True)
     ax.grid(True, axis='y', linestyle='--', alpha=0.6, color='#E2E8F0')
 
-    # Supression des bordures supérieures et droites
     ax.spines['top'].set_visible(False)
     ax.spines['right'].set_visible(False)
     ax.spines['left'].set_color('#CBD5E1')
     ax.spines['bottom'].set_color('#CBD5E1')
 
-    out_path = out / file
+    ax.legend(frameon=False)
 
+    out_path = out / file
     fig.savefig(out_path, bbox_inches='tight', dpi=300)
     plt.close(fig)
 
-    return
-    
- 
-    

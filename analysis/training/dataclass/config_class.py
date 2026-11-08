@@ -151,7 +151,7 @@ class TrainingConfig:
             bottom_k=raw["xai"]["bottom_k"],
             score_threshold=raw["xai"]["score_threshold"],
             cmap=raw["xai"]["cmap"],
-            alpha=raw["xai"]["alpha"]
-            xai_model=raw["xai"]["xai_model"]
+            alpha=raw["xai"]["alpha"],
+            xai_model=raw["xai"]["xai_model"],
             top_k_perc=raw["xai"]["top_k_perc"]
         )

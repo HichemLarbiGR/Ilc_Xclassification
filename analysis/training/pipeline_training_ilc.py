@@ -30,7 +30,7 @@ from dataloader.data_loader_bag import TCGA_BRCA_BagDataset
 
 from dataclass.config_class import TrainingConfig
 from utils.utils import log_config_and_model, load_json, build_name_h5_path
-from training.training_utils import run_stratified_kfold_training
+from train.training_utils import run_stratified_kfold_training
 
 
 # Logging configuration.

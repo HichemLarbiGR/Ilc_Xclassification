@@ -204,7 +204,7 @@ def save_run_json(run_dict, save_dir):
 
 
 def build_name_model_pth(path, architecture, foundation_model_name, id_model, seed):
-    return f"{path}/model_{architecture}_{foundation_model_name.lower()}_{id_model}_seed_{seed}.pth"
+    return f"{path}/model_{architecture}_{foundation_model_name.lower()}_seed_{seed}_{id_model}.pth"
 
 
 def build_name_h5_path(h5_dir, fm_model_name):
@@ -268,7 +268,8 @@ def _build_title_figures(basename: str, fm_name: str, archi_name: str, model_id_
 
 def _get_ids_from_model_path(path: str) -> str:
     sans_extension = path.rsplit('.', 1)[0]
-    resultat = sans_extension.rsplit('_', 1)[-1]
+    parts = sans_extension.rsplit('_', 3)
+    resultat = '_'.join(parts[-3:])
     return resultat
 
 

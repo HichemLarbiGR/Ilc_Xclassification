@@ -35,8 +35,8 @@ from utils.utils import (
 )
 from utils.figures import plot_confusion_matrix, plot_roc_curve
 from utils.reports_predictions import build_predictions_df
-from training.training_utils import evaluate_model_tta
-from training.metrics import get_metrics
+from train.training_utils import evaluate_model_tta
+from train.metrics import get_metrics
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
