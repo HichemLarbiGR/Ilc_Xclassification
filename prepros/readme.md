@@ -17,9 +17,9 @@
 
 This folder contains the scripts and data used to:
 
-1. 📥 **Download** WSIs from the GDC and UNI2-h features from Hugging Face
-2. 🔍 **Inspect** the extracted HDF5 feature files
-3. 🖼️ **Generate** downscaled (1/16) PNG thumbnails of the slides
+1.  **Download** WSIs from the GDC and UNI2-h features from Hugging Face
+2.  **Inspect** the extracted HDF5 feature files
+3.  **Generate** downscaled (1/16) PNG thumbnails of the slides
 
 ## Table of contents
 
@@ -182,7 +182,7 @@ python download_emb_TCGA_BRCA.py
 
 The archives `TCGA-BRCA_IDC.tar.gz` and `TCGA-BRCA_OTHERS.tar.gz` are downloaded into `UNI2-h_features/` and are **not** extracted automatically. After download, move them to `UNI2/` and extract them so that the `.h5` files end up next to the others.
 
-### 🔍 Inspect an HDF5 feature file
+###  Inspect an HDF5 feature file
 
 ```bash
 python utils/explore_h5.py
@@ -196,7 +196,7 @@ Edit the `fpath` variable in the script to point to the `.h5` file you want to i
 - per-dataset details: shape, dtype, size, compression, attributes, min / max / mean / std, NaN count
 - a short head preview of each dataset
 
-### 🖼️ Generate 1/16 PNG thumbnails of WSIs
+###  Generate 1/16 PNG thumbnails of WSIs
 
 ```bash
 python utils/wsi_to_png.py data/wsi data/png_wsi
