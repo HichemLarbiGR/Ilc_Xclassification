@@ -111,15 +111,15 @@ ilc_Xclass_20261026/
 
 ## Data
 
-| Data                               | Location                                          | Tracked |
-|------------------------------------|---------------------------------------------------|:-------:|
-| Raw WSIs                           | `prepros/data/wsi/`                               |   ❌    |
-| 1/16 PNG thumbnails                | `prepros/data/png_wsi/`                           |   ❌    |
-| UNI2 / HOPT0 / UNI2-h features     | `prepros/{UNI2,HOPT0,UNI2-h_features}/`           |   ❌    |
-| Clinical exports (GDC)             | `analysis/clinical/data/`                         |   ❌    |
-| Train/test split JSON              | `analysis/clinical/output/dataset*.json`          |   ✅    |
-| Trained checkpoints                | `analysis/training/output/results/weights/*.pth`  |   ❌    |
-| Run outputs (JSON, CSV, SVG, XAI)  | `analysis/training/output/results/<run_id>/`      |   ❌    |
+| Data                               | Location                                          |
+|------------------------------------|---------------------------------------------------|
+| Raw WSIs                           | `prepros/data/wsi/`                               |
+| 1/16 PNG thumbnails                | `prepros/data/png_wsi/`                           |
+| UNI2 / HOPT0 / UNI2-h features     | `prepros/{UNI2,HOPT0,UNI2-h_features}/`           |
+| Clinical exports (GDC)             | `analysis/clinical/data/`                         |
+| Train/test split JSON              | `analysis/clinical/output/dataset*.json`          |
+| Trained checkpoints                | `analysis/training/output/results/weights/*.pth`  |
+| Run outputs (JSON, CSV, SVG, XAI)  | `analysis/training/output/results/<run_id>/`      |
 
 ---
 
