@@ -1,6 +1,6 @@
 <div align="center">
 
-# ilc_Xclass_20261026 — Analysis / Training
+# Invasive Lobular Carcinoma X-classification : Analysis / Training
 
 **Training, evaluation and explainability (XAI) pipeline for a Multiple-Instance Learning model on TCGA-BRCA whole-slide images**
 
@@ -17,10 +17,10 @@
 
 This folder applies a Multiple-Instance Learning (MIL) model to TCGA-BRCA whole-slide images (WSIs), using patch embeddings from foundation models (HOPTIMUS0, UNI2). It contains everything needed to:
 
-1. 📂 **Load** a predefined data split and the corresponding patch embeddings
-2. 🏋️ **Train** an AttentionMIL model with stratified K-fold cross-validation
-3. 📊 **Evaluate** it on a held-out test set (bootstrap CIs, confusion matrix, ROC curve, predictions / errors tables)
-4. 🔬 **Explain** its predictions (attention heatmaps, top/bottom patches, sanity check, leave-one-out, seed stability, deletion/insertion curves)
+1.  **Load** a predefined data split and the corresponding patch embeddings
+2.  **Train** an AttentionMIL model with stratified K-fold cross-validation
+3.  **Evaluate** it on a held-out test set (bootstrap CIs, confusion matrix, ROC curve, predictions / errors tables)
+4.  **Explain** its predictions (attention heatmaps, top/bottom patches, sanity check, leave-one-out, seed stability, deletion/insertion curves)
 
 ## Table of contents
 
@@ -187,7 +187,7 @@ output/results/
 
 ## Usage
 
-### 🏋️ Train the model (K-fold + final model + test)
+### Train the model (K-fold + final model + test)
 
 ```bash
 python pipeline_training_ilc.py
@@ -206,7 +206,7 @@ This runs:
 - `output/results/<run_id>/<run_id>.json`
 - `output/results/weights/model_<arch>_<fm>_seed_<seed>_<run_id>.pth`
 
-### 📊 Evaluate a trained model on a fixed split
+### Evaluate a trained model on a fixed split
 
 ```bash
 python infer_models_test_sets.py
@@ -221,7 +221,7 @@ The script loads the checkpoint given by `evaluation.infer_model` in `config/abm
 
 The 15 most confident test errors are also written to the log.
 
-### 🔥 Generate attention heatmaps and top/bottom patches
+### Generate attention heatmaps and top/bottom patches
 
 ```bash
 python generate_topbottom_tiles.py --config config/abmil_risk.yaml \
@@ -234,7 +234,7 @@ For each slide, the script writes to `output/results/<model_id>/xai/<slide_id>/`
 - `top/` — the `xai.top_k` most attended patches (read from the WSI)
 - `bottom/` — the `xai.bottom_k` least attended patches
 
-### 🔬 XAI analyses
+### XAI analyses
 
 All XAI scripts share the same CLI (`--config`, plus IDs):
 
