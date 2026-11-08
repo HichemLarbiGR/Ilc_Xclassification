@@ -193,7 +193,7 @@ output/results/
 #### Architecture
 
 <p align="center">
-  <img src="docs/attention_mil_architecture.svg" alt="Attention-based Multiple Instance Learning" width="100%">
+  <img src="docs/attention_mil_architecture.svg" alt="Attention-based Multiple Instance Learning" width="30%">
 </p>
 
 
@@ -201,7 +201,7 @@ output/results/
 #### Overview
 
 <p align="center">
-  <img src="docs/training_evaluation_pipeline.svg" alt="ILC vs NST classification: full training and evaluation pipeline" width="100%">
+  <img src="docs/full_training_evaluation_pipeline.svg" alt="ILC vs NST classification: full training and evaluation pipeline" width="100%">
 </p>
 
 #### Run script
