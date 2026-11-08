@@ -55,16 +55,11 @@ prepros/
 │   ├── TCGA-BRCA_IDC.tar.gz        # Raw UNI2 archives
 │   └── TCGA-BRCA_OTHERS.tar.gz
 │
-├── UNI2-h_features/                # Downloaded UNI2-h features
-│   └── HOPT_TCGA/                  # Extracted UNI2-h embeddings
-│
 ├── utils/
 │   ├── gdc-client                  # GDC download binary (not versioned)
 │   ├── get_wsi_tcga_pred.sh        # Download WSIs from the GDC by UUID
 │   ├── explore_h5.py               # Inspect an HDF5 feature file
 │   └── wsi_to_png.py               # WSI → 1/16 PNG thumbnails
-│
-└── requirements.txt
 ```
 
 > [!WARNING]
