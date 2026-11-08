@@ -193,7 +193,7 @@ output/results/
 #### Architecture
 
 <p align="center">
-  <img src="docs/attention_mil_architecture.svg" alt="Attention-based Multiple Instance Learning" width="30%">
+  <img src="docs/attention_mil_architecture.svg" alt="Attention-based Multiple Instance Learning" width="60%">
 </p>
 
 
